@@ -186,6 +186,13 @@
         });
     }
 
+    /** Opened under its circle (not floating), the panel is brought on screen: a "Cookies" link may be far from it. */
+    function reveal() {
+        var root = banner();
+        if (!root || root.hidden || Module.pending() || typeof root.scrollIntoView !== 'function') return;
+        root.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
     /** A duration the library prints as configured ("30d") gets the words the page has for it. */
     function word() {
         var root = banner();
@@ -436,7 +443,7 @@
         impl = live;
         supersede();
         window.addEventListener('cookie:consent', onAnswer);
-        window.addEventListener('cookie:open', function () { word(); paint(); });
+        window.addEventListener('cookie:open', function () { word(); paint(); reveal(); });
         window.addEventListener('cookie:close', paint);
         document.addEventListener('click', onBefore, true);
         document.addEventListener('click', onClick);
