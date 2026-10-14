@@ -59,7 +59,7 @@ class ConsentConfiguration extends AbstractBaseConfiguration
                             ->booleanNode('required')->defaultNull()->info('Always on, its switch locked: the session, a basket.')->end()
                             ->booleanNode('on_demand')->defaultNull()->info('Known (its words and what it stores are ready) but listed only once a script or an element of the page uses it, and never a reason to ask again.')->end()
                             ->scalarNode('inherits')->defaultNull()->info('The feature it was split from: a visitor who answered for that one is not asked again for this one, which takes the same answer.')->end()
-                            ->arrayNode('erase')->info('Name prefixes of its cookies set by a third party, deleted when it is turned off (e.g. crisp-client).')->scalarPrototype()->end()->defaultValue([])->end()
+                            ->arrayNode('erase')->info('Name prefixes of cookies deleted when it is turned off (e.g. crisp-client). Each is a line of the detailed section unless one of its storage entries takes it in; said to be the site\'s own when it is a group\'s (ANALYTICS/) or another feature\'s entry, a third party\'s otherwise.')->scalarPrototype()->end()->defaultValue([])->end()
                             ->arrayNode('storage')
                                 ->info('What it keeps in the browser: listed in the detailed section, erased when it is refused, and written through the answer (Cookie.cookies / .local / .session).')
                                 ->arrayPrototype()

@@ -99,6 +99,14 @@ consent:
     options: {}                  # anything else @glitchr/flowjs/cookie takes: record: {store: local, name: ...}, debug: true...
 ```
 
+An `erase` prefix (and `erase_on_refuse`, the site's own feature's) is a line
+of the detailed section, `<prefix>*`, unless one of the feature's `storage`
+entries already takes it in (`crisp-client*` for `crisp-client`): declare the
+cookies you can name and keep the prefix for the rest. The line says whose
+cookies they are - the site's own when the prefix is a feature's group
+(`ANALYTICS/`, what `Cookie.set()` writes) or a cookie another feature declares
+(`LANG`), a third party's otherwise (`storage.own`, `storage.third_party`).
+
 What a site says about a feature is laid over what the bundle says, field by
 field; a storage entry replaces the bundle's of the same name. A storage
 entry is `{name, type, duration, purpose, path, domain}` or the bare name:

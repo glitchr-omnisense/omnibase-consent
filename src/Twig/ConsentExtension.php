@@ -119,10 +119,11 @@ class ConsentExtension extends AbstractExtension
         $record = ($options['record'] ?? []) + ['store' => 'cookie', 'name' => 'cookie-consent'];
         $places = ['{session}' => $this->sessionName(), '{answer}' => \is_string($record['name']) ? $record['name'] : 'cookie-consent', '{lifetime}' => $lifetime];
 
+        $features = $this->features();
         $categories = [];
         $inherits = [];
         $durations = [];
-        foreach ($this->features() as $name => $feature) {
+        foreach ($features as $name => $feature) {
             $storage = [];
             foreach ($feature['storage'] as $entry) {
                 $answer = '{answer}' === $entry['name'];
@@ -142,9 +143,17 @@ class ConsentExtension extends AbstractExtension
                 }
                 $storage[] = $made;
             }
-            // A third party's cookies, known by the start of their name: erased with the feature.
+            // The cookies erased with the feature, known by the start of their name: a line of their own unless
+            // one of the feature's entries already takes them in (erased by it, and said by its own words); the
+            // site's own cookies (a feature's GROUP/..., an entry of another feature) said to be the site's, the
+            // rest a third party's.
             foreach ($feature['erase'] as $prefix) {
-                $storage[] = array_filter(['type' => 'cookie', 'name' => $prefix.'*', 'purpose' => $this->word('storage.third_party')], static fn ($value) => null !== $value);
+                $prefix = strtr((string) $prefix, $places);
+                if ('' === $prefix || self::covers($storage, $prefix)) {
+                    continue;
+                }
+                $own = $this->own($prefix, $name, $features, $places);
+                $storage[] = array_filter(['type' => 'cookie', 'name' => $prefix.'*', 'purpose' => $this->word($own ? 'storage.own' : 'storage.third_party')], static fn ($value) => null !== $value);
             }
 
             $categories[] = [
@@ -187,6 +196,58 @@ class ConsentExtension extends AbstractExtension
     public function json(): string
     {
         return json_encode($this->settings(), \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * Whether one of these cookie entries already takes in every cookie whose
+     * name starts with $prefix: the prefix itself, or a pattern ending in *
+     * that the prefix matches (crisp-client* takes in crisp-client-session).
+     *
+     * @param list<array<string, mixed>> $entries
+     */
+    private static function covers(array $entries, string $prefix): bool
+    {
+        foreach ($entries as $entry) {
+            if ('cookie' !== ($entry['type'] ?? 'cookie')) {
+                continue;
+            }
+            $name = (string) $entry['name'];
+            if ($name === $prefix) {
+                return true;
+            }
+            if (str_ends_with($name, '*') && preg_match('/^'.str_replace('\*', '.*', preg_quote($name, '/')).'$/s', $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether the cookies under $prefix are the site's own: a feature's group
+     * (USER/..., ANALYTICS/... - what Cookie.set() writes), or a cookie of the
+     * site's domain another feature declares (the session, LANG...).
+     *
+     * @param array<string, array{storage: list<array<string, mixed>>}> $features
+     * @param array<string, string>                                     $places
+     */
+    private function own(string $prefix, string $feature, array $features, array $places): bool
+    {
+        // GROUP/ and what follows; a bare name is no group's (an "intercom" prefix is Intercom's, whatever the feature is called).
+        if (str_contains($prefix, '/') && isset($features[strtoupper(explode('/', $prefix, 2)[0])])) {
+            return true;
+        }
+        foreach ($features as $name => $other) {
+            if ($name === $feature) {
+                continue;
+            }
+            $entries = array_map(static fn (array $entry): array => ['name' => strtr((string) $entry['name'], $places)] + $entry, array_filter($other['storage'], static fn (array $entry): bool => null === ($entry['domain'] ?? null)));
+            if (self::covers(array_values($entries), $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return list<string> the site's own groups, upper case; USER when none is named */

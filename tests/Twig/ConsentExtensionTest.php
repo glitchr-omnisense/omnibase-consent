@@ -129,6 +129,38 @@ class ConsentExtensionTest extends TestCase
         self::assertSame('1 an', ((array) $settings['consent']['durations'])['1y']);
     }
 
+    public function testAnErasePrefixIsALineOnlyWhenNothingElseSaysIt(): void
+    {
+        $categories = self::categories($this->extension([
+            'erase_on_refuse' => ['USER/THEME/', 'legacy-'],
+            'features' => [
+                // Declared and erased both: one line, the entry's.
+                'CHAT' => ['erase' => ['crisp-client', 'crisp-client-session'], 'storage' => [['name' => 'crisp-client*', 'purpose' => 'Crisp']]],
+                // The site's own group, and a cookie of another feature: the site's, not a third party's.
+                'ANALYTICS' => ['erase' => ['ANALYTICS/', 'LANG', '_pk_']],
+                'INTERCOM' => ['erase' => ['intercom']],
+            ],
+        ])->settings());
+
+        self::assertSame([['type' => 'cookie', 'name' => 'crisp-client*', 'purpose' => 'Crisp']], $categories['CHAT']['storage'], 'a prefix an entry takes in makes no second line');
+
+        $analytics = array_column($categories['ANALYTICS']['storage'], 'purpose', 'name');
+        self::assertSame('Un identifiant tiré au hasard, pour compter les visites.', $analytics['ANALYTICS/VISITOR_ID']);
+        self::assertSame('Des cookies du site lui-même, effacés avec ce choix.', $analytics['ANALYTICS/*'], 'what the site writes under its own group');
+        self::assertSame('Des cookies du site lui-même, effacés avec ce choix.', $analytics['LANG*'], 'a cookie NECESSARY declares');
+        self::assertSame('Les cookies que ce service dépose.', $analytics['_pk_*']);
+        self::assertSame(['intercom*' => 'Les cookies que ce service dépose.'], array_column($categories['INTERCOM']['storage'], 'purpose', 'name'), 'a bare name is no group\'s, whatever the feature is called');
+
+        $user = array_column($categories['USER']['storage'], 'purpose', 'name');
+        self::assertSame(['USER/INFO', 'USER/THEME/*', 'USER/LAST_VISIT', 'legacy-*'], array_keys($user), 'USER/THEME/ is the bundle\'s USER/THEME/* already');
+        self::assertSame('Les cookies que ce service dépose.', $user['legacy-*']);
+
+        foreach (['en' => "The site's own cookies, erased with this choice.", 'de' => 'Cookies der Website selbst, die mit dieser Wahl gelöscht werden.'] as $locale => $words) {
+            $storage = self::categories($this->extension(['features' => ['ANALYTICS' => ['erase' => ['ANALYTICS/']]]], $locale)->settings())['ANALYTICS']['storage'];
+            self::assertSame($words, array_column($storage, 'purpose', 'name')['ANALYTICS/*']);
+        }
+    }
+
     public function testWithoutTheBundlesFeaturesOnlyTheSitesAreListed(): void
     {
         $categories = self::categories($this->extension(['defaults' => false, 'groups' => ['SITE', 'USER'], 'features' => ['USER' => ['storage' => ['USER/*']]]])->settings());

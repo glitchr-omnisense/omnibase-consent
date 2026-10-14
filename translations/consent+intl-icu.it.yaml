@@ -35,6 +35,7 @@ storage:
   timezone: "Il fuso orario."
   visitor: "Un identificativo estratto a caso, per contare le visite."
   third_party: "I cookie depositati da questo servizio."
+  own: "Cookie del sito stesso, cancellati con questa scelta."
 categories:
   necessary:
     label: "Il funzionamento del sito"
