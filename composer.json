@@ -1,6 +1,6 @@
 {
     "name": "omnibase/consent",
-    "description": "The cookie answer of every omnibase site, in one place: a small circle, a panel, an implicit acceptance counted down, and the visitor's choice kept by @glitchr/cookie.",
+    "description": "The cookie answer of every omnibase site, in one place: a small circle, a panel, the features the visitor answers for and what each keeps, a countdown, on @glitchr/flowjs/cookie.",
     "type": "symfony-bundle",
     "license": "MIT",
     "authors": [{"name": "Marco Meyer", "email": "marco.meyer@glitchr.io"}],

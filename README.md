@@ -2,23 +2,34 @@
 
 The cookie answer of the [omnibase](https://github.com/glitchr-studio/omnibase)
 sites, written once: a small circle that opens a panel - what the site keeps,
-**accept**, **refuse** - instead of a copy of the same controller in every site.
+**accept**, **refuse**, **customize** - instead of a copy of the same
+controller in every site.
 
+- **Feature by feature.** Whatever is kept in the visitor's browser belongs to
+  a *feature* the visitor answers for: what the site cannot work without
+  (`NECESSARY`, always on), the visitor's preferences (`USER`), the time zone
+  (`LOCATION`), a chat, a measure of audience, Instagram... "Personnaliser"
+  opens the detailed section: one row per feature, its switch, and what it
+  keeps - each cookie by name, how long, what for.
+- **The answer is enforced.** A refused feature writes nothing (through
+  `Cookie.set()`, `Cookie.cookies`, `Cookie.local`, `Cookie.session`) and what
+  it had kept is erased; accepted again, it writes again. A tracker never
+  starts without a yes.
 - A visitor who has not answered sees the panel float at the bottom of the
-  screen with a countdown (`consent.countdown`, 10 s): no answer is a yes,
-  and so is a click elsewhere. The site keeps only what makes it work.
-- The answer is kept the way [`@glitchr/cookie`](https://gitlab.glitchr.dev/public-repository/javascript/cookie)
-  keeps it (`localStorage` `cookie/<GROUP>`), through `window.Cookie`, which
-  omnibase loads on every page: a refusal deletes the groups' cookies
-  (`USER/*`: theme, language, time zone...) and keeps them from coming back.
-- **Feature by feature.** Whatever keeps cookies - the site itself (`USER`),
-  a chat, a measure of audience, Instagram - is a *feature* with its own switch
-  under "Choisir". **D'accord** turns them all on, **Refuser** all off, waiting
-  only the site's own (`implicit`): a tracker never starts without a yes.
+  screen with a countdown (`consent.countdown`, 10 s): when the time is up -
+  or on a click elsewhere - each feature takes its default, the site's own on
+  and the rest off. `countdown: 0` waits for an answer; `countdown_action`
+  makes no answer a yes to everything, or a no.
 - Anything with `data-consent-open` opens the panel - a "Cookies" entry of a
   sitemap, a link of the privacy page.
-- No dependency: a plain script (`bundles/consent/js/consent.js`) that
-  watches the page, so transparent.js or Turbo page swaps need nothing.
+- The work is done by [`@glitchr/flowjs/cookie`](https://github.com/glitchr-studio/flowjs/blob/main/docs/cookie.md)
+  (the `Cookie` global omnibase loads on every page): the answer and where it
+  is kept, asking again, the countdown, the detailed section, the erasing.
+  The bundle gives it the site's configuration and its words, the markup, and
+  `window.Consent` for the scripts.
+- Nobody is asked twice: the answers given before that library
+  (`localStorage` `cookie/<GROUP>`, as `@glitchr/cookie` kept them) are taken
+  over, and a feature split from another one takes that one's answer.
 
 ## Install
 
@@ -39,35 +50,82 @@ Base\Consent\ConsentBundle::class => ['all' => true],
 <button type="button" data-consent-open>Cookies</button>
 ```
 
+The page needs `@glitchr/flowjs` 1.2.0 or later for its `Cookie` global:
+omnibase's `base-async` imports it. On a page that still packs
+`@glitchr/cookie` (an older core) the bundle falls back on
+`consent-legacy.js`, the panel as it was before the detailed section.
+
 ## Configure
+
+Nothing is needed: the bundle starts from its own features
+(`config/features.php`).
+
+| Feature | | Keeps |
+| --- | --- | --- |
+| `NECESSARY` | required: never asked, its switch locked on | the session cookie, `LANG` (the language of the site), the CSRF token of a form being sent, `REMEMBERME`, the answer itself (`cookie-consent`) |
+| `USER` | on until refused | `USER/INFO` (the browser's language, calendar, light or dark theme), `USER/THEME/*`, `USER/LAST_VISIT` |
+| `LOCATION` | on until refused; takes the answer given to `USER` | `LOCATION/TIMEZONE` |
+| `ANALYTICS`, `CHAT`, `SOCIAL` | on demand: listed once a script or an element uses them, off until a yes | `ANALYTICS/VISITOR_ID` |
 
 ```yaml
 # config/packages/consent.yaml
 consent:
-    groups: [USER]               # @glitchr/cookie groups; the first tells whether the visitor answered
-    countdown: 10                # seconds before no answer counts as yes; 0 = wait for an answer
+    groups: [USER]               # the site's own features: on until refused; the first is "the site's answer" (Consent.refused())
+    countdown: 10                # seconds before no answer is an answer; 0 = wait for one
+    countdown_action: default    # default (each feature its default) | accept | refuse
+    dismiss: default             # a click elsewhere while the question floats: default | accept | refuse | none
+    reopen: banner               # what the circle shows once answered: banner (the question) | details
+    position: bottom-left        # where the question floats: bottom-right, bottom-center, top-left...
+    lifetime: 180d               # how long an answer counts
+    version: ~                   # changed, every visitor is asked again
+    signals: { gpc: false, dnt: false }   # privacy signals honoured: true, or the features they cover
     privacy_route: app_privacy   # linked from the panel; null or a missing route leaves the link out
     privacy_route_parameters: {} # e.g. {slug: vie-privee} when a generic route serves the page
-    erase_on_refuse: []          # other cookies to delete on a refusal, by name prefix (e.g. crisp-client)
-    features:                    # the others, each with its switch; off until the visitor says yes
-        CHAT: { erase: [crisp-client] }
-        ANALYTICS: ~
+    erase_on_refuse: []          # other cookies erased with the site's own, by name prefix
+    defaults: true               # false: none of the bundle's own features, only those below
+    features:
+        LOCATION: false          # one of the bundle's taken out (the time zone then goes with USER)
+        CHAT: { erase: [crisp-client] }     # a third party's cookies, by name prefix
         SOCIAL: ~                # omnibase/social loads Instagram on the `social:consent` event this sends
-        # implicit: true  -> on when the visitor does not answer (only for what the site needs)
-        # required: true  -> always on, its switch locked
+        ANALYTICS:               # what it keeps: listed in the detailed section, erased at a refusal
+            storage:
+                - { name: '_pk_*', duration: 13mo, purpose: 'Matomo' }
+                - { name: visits, type: local, purpose: analytics_visits }
+        BASKET: { required: true, storage: [basket] }
+        # implicit: true   -> on until refused, on when the visitor does not answer (only for what the site needs)
+        # required: true   -> always on, its switch locked
+        # on_demand: true  -> known, listed only once something uses it
+        # inherits: USER   -> split from USER: takes the answer USER was given, nobody is asked again
+    options: {}                  # anything else @glitchr/flowjs/cookie takes: record: {store: local, name: ...}, debug: true...
 ```
 
-Labels and descriptions are the translations `consent.features.<name>.label`
-and `.description`; the bundle has words for `user`, `chat`, `analytics` and
-`social` in five languages, a site adds or rewords its own.
+What a site says about a feature is laid over what the bundle says, field by
+field; a storage entry replaces the bundle's of the same name. A storage
+entry is `{name, type, duration, purpose, path, domain}` or the bare name:
+`type` is `cookie` (default), `local` or `session`; `name` may be a pattern
+(`USER/*`); `{session}` is the session cookie's name, `{answer}` the answer's,
+`{lifetime}` its duration.
 
-The words are in the `consent` translation domain (fr, en, de, it, ja): a site
-overrides any of them in its own `translations/consent+intl-icu.<locale>.yaml`.
+Every word is a translation of the `consent` domain (fr, en, de, it, ja),
+which a site overrides in its own `translations/consent+intl-icu.<locale>.yaml`:
+
+- `features.<name>.label` and `.description` - a feature the translations name
+  is known to the panel even when the configuration does not declare it: a
+  script that uses it gets its words;
+- `storage.<purpose>` - what an entry is for (a `purpose` that is no key is
+  shown as written);
+- `duration.session`, `duration.days`... - the durations (`30d` reads
+  "30 jours");
+- the panel's own: `text`, `implicit`, `implicit_refuse`, `accept`, `refuse`,
+  `details` ("Personnaliser"), `choices`, `accept_all`, `refuse_all`, `save`,
+  `close`, `required`, `stored`.
 
 ## Look
 
 `bundles/consent/css/consent.css`, themed by custom properties set anywhere
-above the circle:
+above the circle. The states are classes of the circle (`.ga-cookie`):
+`is-floating` (not answered: the panel at the bottom of the screen),
+`is-choosing` (the detailed section), `is-refused`.
 
 ```css
 :root {
@@ -96,14 +154,21 @@ window.Consent.use('CHAT', { label: 'The chat' }, () => loadCrisp(), () => windo
 window.Consent.cookie('ANALYTICS', 'VISITOR_ID', id, 30 * 24 * 3600);
 ```
 
-`@glitchr/cookie`'s `Cookie.set(group, ...)` is superseded the same way:
-any group a script writes becomes a feature of the panel, and stays
-unwritten while it is off. Markup can wait too:
+`Cookie.set(group, ...)` is superseded the same way: any group a script
+writes becomes a feature of the panel, and stays unwritten while it is off -
+unless the cookie is declared under a feature (`storage`), whose answer then
+decides. Markup can wait too:
 
 ```html
 <script type="text/plain" data-consent-script="ANALYTICS" data-src="https://..."></script>
 <iframe data-consent-script="SOCIAL" data-consent-src="https://www.instagram.com/p/.../embed"></iframe>
+<template data-consent-script="LOCATION"><div id="map"></div></template>
+<p data-consent-placeholder="LOCATION">Shown until the feature is on. <button type="button" data-consent-open>Cookies</button></p>
 ```
+
+The scripts of a page run before the library is there (the bundle's comes
+first): until then `Consent` answers from what the browser already holds, and
+a `Consent.use()` is kept and made once the page's scripts have all run.
 
 The rest of the API:
 
@@ -117,15 +182,22 @@ window.addEventListener('consent:change', (e) => e.detail.features); // {USER: t
 document.addEventListener('chat:consent', () => {});               // a feature just turned on
 ```
 
-A circle may leave the page, or lose its panel, between two calls - a page
-swap empties the bar it sat in, a script rebuilds the footer. Nothing here
-throws then: an answer is still recorded, `open()` and `close()` do nothing
-when there is no panel to act on.
+Several circles of a page share one panel: it sits under the first the visitor
+can see while the question floats, under the one clicked afterwards. A circle
+may leave the page with it - a page swap empties the bar it sat in, a script
+rebuilds the footer: the next circle's panel takes over, and nothing throws.
 
 ## Tests
 
 ```bash
-npm install && npm test     # node --test, on jsdom: tests/js/consent.test.mjs
+npm install && npm test     # node --test, on jsdom: the partial itself, consent.js on @glitchr/flowjs/cookie, consent-legacy.js without it
+vendor/bin/phpunit          # the configuration, what the partial prints, every language's words
+```
+
+In omnibase's harness (`glitchr/omnibase`, `docker/`), on this checkout:
+
+```bash
+docker compose -f compose.yml run --rm -v /path/to/consent:/srv/demo/vendor/omnibase/consent omnibase test consent
 ```
 
 ## License

@@ -26,5 +26,7 @@ class ConsentExtension extends AbstractBaseExtension
         // Flat parameters (consent.groups, consent.countdown...), and the whole tree for the Twig extension.
         $this->setConfiguration($container, $config, $configuration->getTreeBuilder()->buildTree()->getName());
         $container->setParameter('consent.config', $config);
+        // The bundle's own features, which the site's are laid over (consent.defaults).
+        $container->setParameter('consent.defaults', require \dirname(__DIR__, 2).'/config/features.php');
     }
 }

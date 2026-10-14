@@ -1,124 +1,126 @@
 /*
  * omnibase/consent - the cookie answer of an omnibase site, feature by
- * feature, no dependency.
+ * feature: window.Consent, in front of @glitchr/flowjs/cookie (the Cookie
+ * global omnibase loads on every page).
  *
- * A FEATURE is whatever keeps cookies under one @glitchr/cookie group: the
- * site's own (USER: session, language, theme), a chat (CHAT), a measure of
- * audience (ANALYTICS), Instagram (SOCIAL)... Each has a switch in the panel
- * (under "Choisir"), and its answer is kept the way @glitchr/cookie keeps it
- * (localStorage "cookie/<GROUP>" = true | false), through window.Cookie when
- * the page has it - so turning a feature off also deletes its cookies.
- *
- * Features come from three places:
- *   - the configuration (consent.groups, consent.features), handed by the
- *     partial in data-consent-features;
- *   - the scripts, as they run:
- *       Consent.use('CHAT', {label: 'Chat'}, () => loadCrisp(), () => hideCrisp());
- *     declares the feature (its switch appears) and runs the first function
- *     when it is on - now or once the visitor says yes - the second when it
- *     goes off;
- *   - any script writing a cookie through @glitchr/cookie: Cookie.set(group, ...)
- *     is superseded, so an unknown group becomes a feature with its switch,
- *     and nothing is written while that feature is off.
- *   Elements wait for a feature too: <script type="text/plain"
- *   data-consent-script="ANALYTICS" data-src="..."> runs, and
- *   <iframe data-consent-script="SOCIAL" data-consent-src="..."> loads, once on.
- *
- * Not answered yet: the first circle of the page floats its panel at the
- * bottom of the screen and counts down (data-consent-countdown seconds). At 0,
- * or on a click elsewhere, the implicit features (the site's own) go on and
- * the others stay off. D'accord turns every feature on, Refuser every one off
- * (but a required one), "Enregistrer mes choix" keeps the switches as set.
+ * The library does the work: it keeps the answer (one yes or no per
+ * category, in a cookie, and in localStorage "cookie/<GROUP>" as
+ * @glitchr/cookie did), asks again when it has to, counts down, shows the
+ * question and the detailed section, erases what a refused category stores
+ * and lets nothing be written under it, wakes the elements that wait. This
+ * script gives it the site's configuration - the JSON the partial prints
+ * (consent_settings(): the features as categories, their words, what each
+ * stores) -, tells it which markup is its banner (the partial's panel,
+ * attributes data-consent-*), and keeps what the sites were written against:
  *
  *   Consent.state(name)    true | false | null (not answered)
  *   Consent.enabled(name)  what a script should do now (an implicit feature is on until refused)
  *   Consent.use(name, options, onEnable, onDisable)
  *   Consent.cookie(group, name, value, expires)   Cookie.set() through the answer
  *   Consent.undecided()  Consent.refused()  Consent.accepted()   (the site's own feature)
- *   Consent.accept()  Consent.refuse()  Consent.open()  Consent.close()  Consent.features()
+ *   Consent.accept()  Consent.refuse()  Consent.open()  Consent.close()  Consent.features()  Consent.scan()
+ *
+ * A FEATURE is a category of the library under an upper-case name: the site's
+ * own (USER), what it cannot work without (NECESSARY), the time zone
+ * (LOCATION), a chat (CHAT), a measure of audience (ANALYTICS)... They come
+ * from the configuration, from the scripts as they run
+ *     Consent.use('CHAT', {label: 'Chat'}, () => loadCrisp(), () => hideCrisp());
+ * and from any script writing a cookie through Cookie.set(group, ...): an
+ * unknown group becomes a feature with its switch, off until the visitor
+ * says yes. Elements wait for a feature too: <script type="text/plain"
+ * data-consent-script="ANALYTICS" data-src="..."> runs, and
+ * <iframe data-consent-script="SOCIAL" data-consent-src="..."> loads, once on.
+ *
+ * The circles (there may be several on a page) share one panel, the
+ * library's banner: it sits under the circle that shows it - the first the
+ * visitor can see while the question floats, the one clicked afterwards.
+ * The circle carries the states the stylesheets are written against:
+ * is-floating (not answered: the panel at the bottom of the screen),
+ * is-choosing (the detailed section), is-refused.
  *
  * Every answer dispatches `consent:change` on window ({detail: {consent,
  * groups, features}}), `ga:cookie` for the sites written before this bundle,
  * and, for each feature turned on, `<name>:consent` on the document (the
  * social bundle loads Instagram on `social:consent`) - sent again for every
  * feature already on, at load and after each page swap.
+ *
+ * The library comes with the page's own scripts, after this one: until they
+ * have all run (DOMContentLoaded) the calls are kept, and answered from what
+ * the browser already holds. A page that still packs @glitchr/cookie has no
+ * such library: consent-legacy.js, the panel as it was, takes over there.
+ *
+ * Not one word the visitor reads is written here.
  */
 (function () {
     'use strict';
     if (window.Consent) return;
 
-    var STORE = 'cookie/';
-    var ANSWERED = 'consent/answered';
-    var widgets = [];
-    var features = {};   // NAME -> {name, label, description, implicit, required, erase, on: [], off: []}
-    var order = [];
-    var floating = null;
-    var timer = null;
-    var labels = {};     // NAME -> {label, description}: the site's words for features scripts may declare
+    var WIDGET = '[data-consent=""]';
+    var PANEL = '.ga-cookie-panel';
+    var OPENERS = '[data-consent-open], [data-cookie-open]';
+    var LEGACY = 'cookie/';
 
-    function upper(name) { return String(name || '').trim().toUpperCase(); }
+    // The library's attributes are the partial's, under this prefix; these are
+    // the ones the partial already had another use for, or names differently.
+    var PREFIX = 'data-consent';
+    var HOOKS = {
+        details: 'data-consent-section',      // the detailed section ([data-consent-details] is the button that opens it)
+        customize: 'data-consent-details',
+        toggle: 'data-consent-switch',        // a category's switch ([data-consent-toggle] is the circle)
+        save: 'data-consent-keep',
+        features: 'data-consent-governs',
+        countdown: 'data-consent-counting',   // (data-consent-countdown: the seconds, on the circle)
+        category: 'data-consent-script'
+    };
+    var CLASSES = { root: 'ga-cookie-panel', entry: 'ga-cookie-entry' };
 
-    function storage(read) {
-        try { return read(window.localStorage); } catch (e) { return undefined; }
+    var Module = null;      // @glitchr/flowjs/cookie
+    var started = false;
+    var settings = null;    // the page's configuration, as the library takes it
+    var text = null;        // as printed: read again only when another page prints another
+    var own = { primary: 'USER', inherits: {}, durations: {} };   // what is this script's in it
+    var queue = [];         // the calls made before the library was there
+    var target = null;      // the circle whose panel the library takes when it needs one
+    var spare = null;       // what it is given on a page without a circle
+    var before = { open: false, pending: false };
+    var scheduled = false;
+
+    function upper(name) { return String(name === undefined || name === null ? '' : name).trim().toUpperCase(); }
+    function capital(name) { return name.charAt(0) + name.slice(1).toLowerCase(); }
+    function primary() { return upper(own.primary) || 'USER'; }
+
+    function kept(name) {
+        try {
+            var value = window.localStorage.getItem(LEGACY + name);
+            return value === null || value === undefined ? null : value === 'true';
+        } catch (e) { return null; }
     }
 
-    function stored(name) {
-        var value = storage(function (s) { return s.getItem(STORE + name); });
-        if (value === null || value === undefined) return null;
-        return value === 'true' || value === true;
+    /** The configuration the page prints (the first circle's); false when it is the one already read. */
+    function read() {
+        var block = document.querySelector('script[type="application/json"][data-consent-settings]');
+        if (!block || block.textContent === text) return false;
+        var parsed;
+        try { parsed = JSON.parse(block.textContent); } catch (e) { return false; }
+        if (!parsed || typeof parsed !== 'object') return false;
+        text = block.textContent;
+        own = Object.assign({ primary: 'USER', inherits: {}, durations: {} }, parsed.consent || {});
+        delete parsed.consent;
+        settings = parsed;
+        return true;
     }
 
-    function primary() {
-        for (var i = 0; i < order.length; i++) if (features[order[i]].implicit) return order[i];
-        return order[0] || 'USER';
+    function configured(name) {
+        var list = settings && Array.isArray(settings.categories) ? settings.categories : [];
+        for (var i = 0; i < list.length; i++) if (upper(list[i].key) === name) return list[i];
+        return null;
     }
 
-    /** true | false | null: what the visitor answered for this feature. */
-    function state(name) {
-        name = upper(name) || primary();
-        var value = stored(name);
-        if (value !== null) return value;
-        return features[name] && features[name].required ? true : null;
-    }
+    // ── The circles and the panel ───────────────────────────────────
 
-    /** What a script should do now: an implicit feature is on until refused, any other off until accepted. */
-    function enabled(name) {
-        name = upper(name) || primary();
-        var value = state(name);
-        if (value !== null) return value;
-        return !!(features[name] && features[name].implicit);
-    }
-
-    function answered() {
-        return storage(function (s) { return s.getItem(ANSWERED); }) != null || stored(primary()) !== null;
-    }
-
-    function declare(definition) {
-        var name = upper(definition.name);
-        if (!name) return null;
-        var feature = features[name];
-        if (!feature) {
-            feature = features[name] = { name: name, label: name.charAt(0) + name.slice(1).toLowerCase(), description: '', implicit: false, required: false, erase: [], on: [], off: [] };
-            order.push(name);
-        }
-        ['label', 'description'].forEach(function (key) {
-            var words = definition[key] || (labels[name] && labels[name][key]);
-            // The site's translations win over a script's own words, which win over the bare name.
-            if (labels[name] && labels[name][key]) words = labels[name][key];
-            if (words) feature[key] = words;
-        });
-        ['implicit', 'required'].forEach(function (key) { if (typeof definition[key] === 'boolean') feature[key] = definition[key]; });
-        if (Array.isArray(definition.erase)) definition.erase.forEach(function (prefix) { if (feature.erase.indexOf(prefix) < 0) feature.erase.push(prefix); });
-        widgets.forEach(rows);
-        return feature;
-    }
-
-    // ── The panel ───────────────────────────────────────────────────
-
-    // A circle may have lost its panel, or be gone itself, by the time it is
-    // asked something: a page swap empties the bar it sat in, a script rebuilds
-    // a footer. Every function below takes that for an answer, not an error.
-    function panel(widget) { return widget ? widget.querySelector('.ga-cookie-panel') : null; }
+    function circles() { return Array.prototype.slice.call(document.querySelectorAll(WIDGET)); }
+    function panel(widget) { return widget ? widget.querySelector(PANEL) : null; }
+    function button(widget) { return widget ? widget.querySelector('[data-consent-toggle]') : null; }
 
     /** On screen for the visitor: not in a hidden footer, a folded bar (display, visibility, opacity). */
     function visible(element) {
@@ -127,358 +129,355 @@
         return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
     }
 
-    /** The first circle the visitor can see, else the first. */
+    /** The circle that shows the panel by itself: the first the visitor can see among those allowed to float, else the first. */
     function front() {
-        var connected = widgets.filter(function (w) { return w.isConnected; });
-        return connected.filter(visible)[0] || connected[0];
-    }
-    function button(widget) { return widget ? widget.querySelector('[data-consent-toggle]') : null; }
-
-    /** Open (true) or closed: a circle without its panel is closed. */
-    function shown(widget) {
-        var p = panel(widget);
-        return !!p && !p.hidden;
+        var all = circles();
+        var allowed = all.filter(function (widget) { return widget.getAttribute('data-consent-floating') !== 'false'; });
+        return allowed.filter(visible)[0] || all.filter(visible)[0] || allowed[0] || all[0] || null;
     }
 
-    function open(widget) {
-        widget = widget || front();
-        var p = panel(widget);
-        if (!p) return;
-        p.hidden = false;
-        var b = button(widget);
-        if (b) b.setAttribute('aria-expanded', 'true');
+    function banner() {
+        var root = Module ? Module.banner() : null;
+        return root && root.isConnected ? root : null;
     }
 
-    /** Closes a circle's panel - the visible one when none is named. Nothing to close is not an error. */
-    function close(widget) {
-        widget = widget || front();
+    /** The library's banner: the panel of the circle it is to show under; on a page without a circle, nothing to see. */
+    function template() {
+        var widget = target && target.isConnected ? target : front();
+        var found = panel(widget);
+        if (found) return found;
+        spare = document.createElement('div');
+        return spare;
+    }
+
+    /** Put the one live panel under this circle; the panel that was there takes its place. */
+    function seat(widget) {
         if (!widget) return;
-        var p = panel(widget);
-        if (p) p.hidden = true;
-        var b = button(widget);
-        if (b) b.setAttribute('aria-expanded', 'false');
-        choosing(widget, false);
-    }
-
-    /** One switch per feature; a required one is locked on. */
-    function rows(widget) {
-        var list = widget.querySelector('.ga-cookie-features');
-        if (!list) return;
-        order.forEach(function (name) {
-            var feature = features[name];
-            var input = list.querySelector('[data-consent-feature="' + name + '"]');
-            if (!input) {
-                var row = document.createElement('li');
-                row.className = 'ga-cookie-feature';
-                var label = document.createElement('label');
-                input = document.createElement('input');
-                input.type = 'checkbox';
-                input.setAttribute('data-consent-feature', name);
-                var text = document.createElement('span');
-                text.className = 'ga-cookie-feature-text';
-                var title = document.createElement('strong');
-                text.appendChild(title);
-                var small = document.createElement('small');
-                text.appendChild(small);
-                label.appendChild(input);
-                label.appendChild(text);
-                row.appendChild(label);
-                list.appendChild(row);
-            }
-            var texts = input.parentNode.querySelector('.ga-cookie-feature-text');
-            texts.firstChild.textContent = feature.label;
-            texts.lastChild.textContent = feature.description || '';
-            input.disabled = feature.required;
-            if (!widget.classList.contains('is-choosing')) input.checked = enabled(name);
-        });
-        var details = widget.querySelector('[data-consent-details]');
-        if (details) details.hidden = order.length < 2;
-    }
-
-    function choosing(widget, on) {
-        widget.classList.toggle('is-choosing', on);
-        var list = widget.querySelector('.ga-cookie-features');
-        if (list) list.hidden = !on;
-        var save = widget.querySelector('[data-consent-save]');
-        if (save) save.hidden = !on;
-        var details = widget.querySelector('[data-consent-details]');
-        if (details) details.setAttribute('aria-expanded', on ? 'true' : 'false');
-        if (on) {
-            // Choosing is answering: no countdown behind the visitor's back.
-            clearTimeout(timer);
-            rows(widget);
+        target = widget;
+        var root = banner();
+        var mine = panel(widget);
+        if (!root || mine === root) return;
+        if (mine) {
+            var id = mine.id;
+            mine.hidden = true;
+            root.parentNode.insertBefore(mine, root);
+            mine.id = root.id;
+            root.id = id;
         }
+        widget.appendChild(root);
     }
 
-    function render(widget) {
-        var refused = state() === false;
-        widget.classList.toggle('is-refused', refused);
-        var b = button(widget);
-        if (b) b.title = b.dataset[refused ? 'refusedLabel' : 'acceptedLabel'] || '';
-        rows(widget);
-    }
-
-    function countdown(widget, left) {
-        widget.querySelectorAll('.ga-cookie-count').forEach(function (count) {
-            count.textContent = String(left);
-            count.classList.remove('is-tick');
-            void count.offsetWidth; // the number pops at every second
-            count.classList.add('is-tick');
+    /** The circles as the answer and the panel stand. */
+    function paint() {
+        var root = banner();
+        var open = !!root && !root.hidden;
+        var pending = Module.pending();
+        var refused = Module.state(primary()) === false;
+        circles().forEach(function (widget) {
+            var mine = open && widget.contains(root);
+            widget.classList.toggle('is-floating', mine && pending);
+            widget.classList.toggle('is-choosing', mine && root.classList.contains('is-customizing'));
+            widget.classList.toggle('is-refused', refused);
+            var b = button(widget);
+            if (!b) return;
+            b.setAttribute('aria-expanded', mine ? 'true' : 'false');
+            b.title = b.getAttribute(refused ? 'data-refused-label' : 'data-accepted-label') || '';
+            if (mine && root.id) b.setAttribute('aria-controls', root.id);
         });
-        timer = setTimeout(function () {
-            if (!widget.isConnected || answered() || widget.classList.contains('is-choosing')) return;
-            // No answer counts only for a question the visitor could read: hidden
-            // (its bar folded, another tab), the count waits where it is.
-            if (document.hidden || !visible(panel(widget))) return countdown(widget, left);
-            if (left > 0) countdown(widget, left - 1); else decide(implicitChoice());
-        }, left > 0 ? 1000 : 600);
     }
 
-    function float(widget) {
-        floating = widget;
-        widget.classList.add('is-floating');
-        open(widget);
-        var seconds = parseInt(widget.dataset.consentCountdown || '0', 10);
-        if (seconds > 0) countdown(widget, seconds);
+    /** A duration the library prints as configured ("30d") gets the words the page has for it. */
+    function word() {
+        var root = banner();
+        if (!root) return;
+        Array.prototype.forEach.call(root.querySelectorAll('[' + PREFIX + '-entry-duration]'), function (el) {
+            var said = own.durations[el.textContent];
+            if (said && said !== el.textContent) el.textContent = said;
+        });
     }
 
-    // ── Answers ─────────────────────────────────────────────────────
+    // ── The configuration ───────────────────────────────────────────
 
-    function choice(fn) {
+    /**
+     * A feature split from another takes the answer the other was given: the
+     * visitor who answered before the split is not asked again. Through the
+     * keys @glitchr/cookie kept, which the library takes over.
+     */
+    function inheritKept() {
+        if (!settings || settings.legacy === false) return;
+        Object.keys(own.inherits).forEach(function (name) {
+            var from = kept(upper(own.inherits[name]));
+            if (from === null || kept(upper(name)) !== null) return;
+            try { window.localStorage.setItem(LEGACY + upper(name), String(from)); } catch (e) { /* closed: asked again */ }
+        });
+    }
+
+    /** The same, for an answer the library holds without those keys. */
+    function inherit() {
         var map = {};
-        order.forEach(function (name) { map[name] = features[name].required ? true : fn(features[name]); });
-        return map;
-    }
-    function implicitChoice() { return choice(function (f) { return f.implicit; }); }
-
-    function eraseCookies(prefixes) {
-        if (!prefixes.length) return;
-        document.cookie.split(';').map(function (c) { return c.trim().split('=')[0]; })
-            .filter(function (name) { return name && prefixes.some(function (prefix) { return name.indexOf(prefix) === 0; }); })
-            .forEach(function (name) { document.cookie = name + '=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'; });
-    }
-
-    function globalErase() {
-        var widget = widgets[0];
-        try { return JSON.parse((widget && widget.dataset.consentErase) || '[]'); } catch (e) { return []; }
-    }
-
-    function decide(map) {
-        var before = {};
-        order.forEach(function (name) { before[name] = enabled(name); });
-        var cookie = window.Cookie && typeof window.Cookie.setConsent === 'function' ? window.Cookie : null;
-
-        Object.keys(map).forEach(function (name) {
-            var consent = !!map[name];
-            // One group at a time: given a list, setConsent() files the list as one group.
-            if (cookie) cookie.setConsent(consent, name);
-            else storage(function (s) { s.setItem(STORE + name, String(consent)); });
-            if (!consent) eraseCookies(features[name] ? features[name].erase : []);
+        var some = false;
+        Object.keys(own.inherits).forEach(function (name) {
+            var from = Module.state(own.inherits[name]);
+            if (from === null || !Module.category(name) || Module.state(name) !== null) return;
+            map[upper(name)] = from;
+            some = true;
         });
-        if (map[primary()] === false) eraseCookies(globalErase());
-        storage(function (s) { s.setItem(ANSWERED, new Date().toISOString()); });
-
-        clearTimeout(timer);
-        floating = null;
-        widgets.forEach(function (widget) {
-            widget.classList.remove('is-floating');
-            close(widget);
-            render(widget);
-        });
-
-        var now = {};
-        order.forEach(function (name) {
-            now[name] = enabled(name);
-            if (now[name] === before[name]) return;
-            (now[name] ? features[name].on : features[name].off).forEach(run);
-            if (now[name]) {
-                wake(name);
-                document.dispatchEvent(new CustomEvent(name.toLowerCase() + ':consent'));
-            }
-        });
-        window.dispatchEvent(new CustomEvent('consent:change', { detail: { consent: now[primary()], groups: order.slice(), features: now } }));
-        window.dispatchEvent(new Event('ga:cookie'));
+        if (some) Module.save(map);
     }
 
-    function run(fn) {
-        try { fn(); } catch (e) { if (window.console) console.error(e); }
+    function configure() {
+        inheritKept();
+        Module.ready(Object.assign({}, settings, { prefix: PREFIX, hooks: HOOKS, classes: CLASSES, observe: true, template: template }));
+        inherit();
     }
 
-    /** The elements waiting for a feature: <script type="text/plain" data-consent-script>, [data-consent-src]. */
-    function wake(name, root) {
-        (root || document).querySelectorAll('[data-consent-script="' + name + '"]').forEach(function (element) {
-            if (element.dataset.consentAwake) return;
-            element.dataset.consentAwake = '1';
-            if (element.tagName === 'SCRIPT') {
-                var script = document.createElement('script');
-                Array.prototype.forEach.call(element.attributes, function (attribute) {
-                    if (attribute.name !== 'type' && attribute.name !== 'data-src') script.setAttribute(attribute.name, attribute.value);
-                });
-                if (element.dataset.src) script.src = element.dataset.src;
-                if (element.dataset.type) script.type = element.dataset.type;
-                script.text = element.text;
-                element.parentNode.replaceChild(script, element);
-            } else if (element.dataset.consentSrc) {
-                element.src = element.dataset.consentSrc;
-            }
+    /** The page as it is now: its configuration if it is another one, its circles, the panel where it belongs. */
+    function adopt() {
+        if (read()) configure();
+        var all = circles();
+        // A panel that left with its page (Turbo, a footer rebuilt), or the stand-in of a page without a circle: the library takes this page's.
+        var root = Module.banner();
+        if (root && (!root.isConnected || (root === spare && all.length))) {
+            if (root === spare && spare.parentNode) spare.parentNode.removeChild(spare);
+            spare = null;
+            Module.ready({});
+        }
+        all.forEach(function (widget) {
+            // "Personnaliser" is always there: hidden as printed, for the pages consent-legacy.js serves.
+            Array.prototype.forEach.call(widget.querySelectorAll('[' + HOOKS.customize + '][hidden]'), function (el) { el.hidden = false; });
         });
+        word();
+        paint();
+    }
+
+    function later() {
+        if (scheduled) return;
+        scheduled = true;
+        var run = function () { scheduled = false; adopt(); };
+        if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(run); else window.setTimeout(run, 16);
     }
 
     // ── For scripts ─────────────────────────────────────────────────
 
-    function use(name, options, onEnable, onDisable) {
-        if (typeof options === 'function') { onDisable = onEnable; onEnable = options; options = {}; }
-        var feature = declare(Object.assign({}, options || {}, { name: name }));
-        if (!feature) return false;
-        if (onEnable) feature.on.push(onEnable);
-        if (onDisable) feature.off.push(onDisable);
-        if (enabled(feature.name) && onEnable) run(onEnable);
-        return enabled(feature.name);
-    }
-
-    /** @glitchr/cookie's Cookie.set(), superseded: an unknown group becomes a feature, nothing is written while it is off. */
-    function supersede() {
-        var cookie = window.Cookie;
-        if (!cookie || typeof cookie.set !== 'function' || cookie.__consent) return;
-        var set = cookie.set;
-        cookie.set = function (group) {
-            var name = upper(group);
-            if (!features[name]) declare({ name: name });
-            if (!enabled(name)) return undefined;
-            return set.apply(cookie, arguments);
-        };
-        cookie.__consent = true;
-    }
-
-    function writeCookie(group, name, value, expires) {
-        var feature = upper(group);
-        if (!features[feature]) declare({ name: feature });
-        if (!enabled(feature)) return false;
-        supersede();
-        if (window.Cookie && typeof window.Cookie.set === 'function') {
-            window.Cookie.set(feature, name, value, expires);
-        } else {
-            var age = typeof expires === 'number' ? '; max-age=' + expires : '';
-            document.cookie = feature + '/' + upper(name) + '=' + encodeURIComponent(typeof value === 'object' ? JSON.stringify(value) : value) + '; path=/' + age + '; SameSite=Lax';
-        }
-        return true;
-    }
-
-    // ── Circles on the page ─────────────────────────────────────────
-
-    function adopt(widget) {
-        if (widget.dataset.consentReady) return;
-        widget.dataset.consentReady = '1';
-        try {
-            var known = JSON.parse(widget.dataset.consentLabels || '{}');
-            Object.keys(known).forEach(function (name) {
-                labels[name] = known[name];
-                if (features[name]) declare({ name: name }); // declared by a script before the circle came
+    /** Whether a cookie "GROUP/NAME" is declared under a category of its own. */
+    function declared(name) {
+        return Module.categories().some(function (category) {
+            return category.storage.some(function (entry) {
+                if (entry.type !== 'cookie' || typeof entry.name !== 'string') return false;
+                if (entry.name.indexOf('*') === -1) return entry.name === name;
+                return new RegExp('^' + entry.name.split('*').map(function (piece) { return piece.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('.*') + '$').test(name);
             });
-        } catch (e) { /* no words: names */ }
-        var list = [];
-        try { list = JSON.parse(widget.dataset.consentFeatures || '[]'); } catch (e) { list = []; }
-        if (!list.length) {
-            // A partial from before the features: its groups are the site's own.
-            try { list = JSON.parse(widget.dataset.consentGroups || '["USER"]').map(function (n) { return { name: n, implicit: true }; }); } catch (e) { list = [{ name: 'USER', implicit: true }]; }
-        }
-        list.forEach(declare);
-        widgets.push(widget);
-        render(widget);
-    }
-
-    /** Not answered: one circle floats its panel - the first the visitor can see, among those allowed to. */
-    function ask() {
-        if (answered() || (floating && floating.isConnected)) return;
-        var candidates = widgets.filter(function (w) { return w.isConnected && w.dataset.consentFloating !== 'false'; });
-        var widget = candidates.filter(visible)[0] || candidates[0];
-        if (widget) float(widget);
-    }
-
-    function scan(root) {
-        widgets = widgets.filter(function (widget) { return widget.isConnected; });
-        if (floating && !floating.isConnected) { floating = null; clearTimeout(timer); }
-        (root || document).querySelectorAll('[data-consent]').forEach(adopt);
-        ask();
-        order.forEach(function (name) { if (enabled(name)) wake(name, root); });
-    }
-
-    document.addEventListener('click', function (event) {
-        var target = event.target instanceof Element ? event.target : null;
-        if (!target) return;
-        var widget = target.closest('[data-consent]');
-
-        if (target.closest('[data-consent-open], [data-cookie-open]')) {
-            event.preventDefault();
-            var first = floating && floating.isConnected ? floating : front();
-            if (!first) return;
-            // Floating, it stays open: the link is not an answer.
-            if (first.classList.contains('is-floating') || !shown(first)) open(first); else close(first);
-            return;
-        }
-        if (!widget) {
-            // A click elsewhere: the floating panel, left without a word, takes the implicit answer; the others close.
-            if (floating && !answered() && !floating.classList.contains('is-choosing') && visible(panel(floating))) return decide(implicitChoice());
-            widgets.forEach(function (w) { if (!w.classList.contains('is-floating')) close(w); });
-            return;
-        }
-        if (target.closest('[data-consent-accept]')) return decide(choice(function () { return true; }));
-        if (target.closest('[data-consent-refuse]')) return decide(choice(function () { return false; }));
-        if (target.closest('[data-consent-details]')) return choosing(widget, !widget.classList.contains('is-choosing'));
-        if (target.closest('[data-consent-save]')) {
-            var map = {};
-            widget.querySelectorAll('[data-consent-feature]').forEach(function (input) { map[input.dataset.consentFeature] = input.checked || input.disabled; });
-            return decide(map);
-        }
-        if (target.closest('[data-consent-toggle]')) {
-            shown(widget) ? close(widget) : open(widget);
-        }
-    });
-
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') widgets.forEach(function (w) { if (!w.classList.contains('is-floating')) close(w); });
-    });
-
-    window.Consent = {
-        state: state,
-        enabled: enabled,
-        use: use,
-        cookie: writeCookie,
-        features: function () {
-            return order.map(function (name) {
-                var f = features[name];
-                return { name: name, label: f.label, implicit: f.implicit, required: f.required, state: state(name), enabled: enabled(name) };
-            });
-        },
-        undecided: function () { return !answered(); },
-        refused: function () { return state() === false; },
-        accepted: function () { return state() !== false; },
-        accept: function () { decide(choice(function () { return true; })); },
-        refuse: function () { decide(choice(function () { return false; })); },
-        open: function () { open(); },
-        close: function () { widgets.slice().forEach(function (w) { if (!w.classList.contains('is-floating')) close(w); }); },
-        scan: scan
-    };
-
-    /** Each feature already on says so to the page's scripts: on the first load and after each page swap. */
-    function announce() {
-        order.forEach(function (name) {
-            if (enabled(name)) document.dispatchEvent(new CustomEvent(name.toLowerCase() + ':consent'));
         });
     }
 
-    function start() {
-        supersede();
-        scan();
-        announce();
-        // transparent.js fires on window, Turbo on the document (it bubbles to window: one listener each).
-        window.addEventListener('transparent:load', function () { scan(); announce(); });
-        document.addEventListener('turbo:load', function () { scan(); announce(); });
-        new MutationObserver(function (mutations) {
-            if (mutations.some(function (m) { return m.addedNodes.length || m.removedNodes.length; })) scan();
-        }).observe(document.body, { childList: true, subtree: true });
+    function use(name, options, onEnable, onDisable) {
+        if (typeof options === 'function') { onDisable = onEnable; onEnable = options; options = {}; }
+        name = upper(name);
+        if (!name) return false;
+        options = Object.assign({}, options || {});
+        // The site's words win (the configuration's), then the script's, then the bare name.
+        if (!options.label && !Module.category(name)) options.label = capital(name);
+        return Module.use(name, options, onEnable, onDisable);
     }
-    // @glitchr/cookie may come after this script (omnibase loads it async): supersede it then too.
-    window.addEventListener('load', supersede);
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+
+    /** Cookie.set(), superseded: a group nobody declared becomes a feature, and nothing is written while it is off. */
+    function supersede() {
+        if (Module.__consent) return;
+        var set = Module.set;
+        Module.set = function (group, name) {
+            var feature = upper(group);
+            // Declared under a category of its own (USER/INFO), a cookie is that category's; else its group is a feature, listed from now on.
+            if (feature && !declared(feature + '/' + upper(name))) use(feature);
+            return set.apply(Module, arguments);
+        };
+        Module.__consent = true;
+    }
+
+    var live = {
+        state: function (name) { return Module.state(upper(name) || primary()); },
+        enabled: function (name) { return Module.granted(upper(name) || primary()); },
+        use: use,
+        cookie: function (group, name, value, expires) {
+            var feature = upper(group);
+            name = upper(name);
+            // Cookie.set() is superseded: an unknown group is declared there, and nothing is written while its feature is off.
+            Module.set(feature, name, value, expires);
+            return Module.get(feature, name) !== null;
+        },
+        features: function () {
+            return Module.categories().map(function (category) {
+                return { name: upper(category.key), label: category.label, implicit: category.default, required: category.required, state: category.state, enabled: category.granted };
+            });
+        },
+        undecided: function () { return Module.pending(); },
+        refused: function () { return Module.state(primary()) === false; },
+        accepted: function () { return Module.state(primary()) !== false; },
+        accept: function () { Module.accept(); },
+        refuse: function () { Module.refuse(); },
+        open: function () {
+            if (!banner() || banner().hidden) seat(front());
+            Module.open();
+        },
+        close: function () { if (!Module.pending()) Module.close(); },
+        scan: function (root) { adopt(); Module.scan(root); }
+    };
+
+    // Before the library is there: what the browser already holds answers, the rest waits.
+    function guess(name, options) {
+        name = upper(name) || primary();
+        var category = configured(name);
+        if (category && category.required) return true;
+        var value = kept(name);
+        if (value !== null) return value;
+        if (category) return !!category.default;
+        return !!(options && (options.implicit === true || options.default === true));
+    }
+    function wait(method) { return function () { queue.push([method, arguments]); }; }
+    var early = {
+        state: function (name) {
+            name = upper(name) || primary();
+            var category = configured(name);
+            return category && category.required ? true : kept(name);
+        },
+        enabled: function (name) { return guess(name); },
+        use: function (name, options) { queue.push(['use', arguments]); return guess(name, typeof options === 'function' ? null : options); },
+        cookie: function (group) { queue.push(['cookie', arguments]); return guess(group); },
+        features: function () {
+            return (settings && Array.isArray(settings.categories) ? settings.categories : []).filter(function (category) { return !category.onDemand; }).map(function (category) {
+                var name = upper(category.key);
+                return { name: name, label: category.label, implicit: !!category.default, required: !!category.required, state: early.state(name), enabled: guess(name) };
+            });
+        },
+        undecided: function () { return kept(primary()) === null; },
+        refused: function () { return kept(primary()) === false; },
+        accepted: function () { return kept(primary()) !== false; },
+        accept: wait('accept'), refuse: wait('refuse'), open: wait('open'), close: wait('close'), scan: wait('scan')
+    };
+
+    var impl = early;
+    var api = {};
+    Object.keys(early).forEach(function (method) {
+        api[method] = function () { return impl[method].apply(api, arguments); };
+    });
+    window.Consent = api;
+
+    // ── With the library ────────────────────────────────────────────
+
+    function names() {
+        var all = {};
+        (settings.categories || []).forEach(function (category) { all[upper(category.key)] = true; });
+        Module.categories().forEach(function (category) { all[upper(category.key)] = true; });
+        return Object.keys(all);
+    }
+
+    /** Each feature already on says so to the page's scripts: on the first load and after each page swap. */
+    function announce() {
+        names().forEach(function (name) {
+            if (Module.granted(name)) document.dispatchEvent(new CustomEvent(name.toLowerCase() + ':consent'));
+        });
+    }
+
+    function onAnswer(event) {
+        var detail = event.detail || {};
+        paint();
+        (detail.granted || []).forEach(function (key) {
+            document.dispatchEvent(new CustomEvent(String(key).toLowerCase() + ':consent'));
+        });
+        var features = {};
+        Object.keys(detail.categories || {}).forEach(function (key) { features[upper(key)] = detail.categories[key]; });
+        window.dispatchEvent(new CustomEvent('consent:change', { detail: { consent: Module.granted(primary()), groups: Object.keys(features), features: features } }));
+        window.dispatchEvent(new Event('ga:cookie'));
+    }
+
+    /** Before the library hears the click: how things stood, and the panel where the visitor can see it. */
+    function onBefore(event) {
+        var root = banner();
+        before.open = !!root && !root.hidden;
+        before.pending = Module.pending();
+        var clicked = event.target instanceof Element ? event.target : null;
+        if (clicked && !before.open && clicked.closest(OPENERS)) seat(front());
+    }
+
+    function onClick(event) {
+        var clicked = event.target instanceof Element ? event.target : null;
+        if (!clicked) return;
+        // [data-consent-open] is the library's own; the attribute of its default prefix opens the panel too.
+        if (clicked.closest('[data-consent-open]')) return;
+        var opener = clicked.closest('[data-cookie-open]');
+        if (opener) {
+            event.preventDefault();
+            Module.open(undefined, opener);
+            return;
+        }
+        var toggle = clicked.closest('[data-consent-toggle]');
+        var widget = toggle ? toggle.closest(WIDGET) : null;
+        if (widget) {
+            // Floating, the library took this click for one elsewhere: answered as consent.dismiss says, or left open.
+            if (before.open && before.pending) return;
+            var root = banner();
+            if (before.open && root && widget.contains(root)) return void Module.close();
+            seat(widget);
+            Module.open(undefined, toggle);
+            return;
+        }
+        // A click elsewhere closes the panel of a visitor who has answered.
+        var shown = banner();
+        if (before.open && !before.pending && shown && !shown.contains(clicked)) Module.close();
+    }
+
+    function onKey(event) {
+        if (event.key !== 'Escape') return;
+        var root = banner();
+        // The detailed section is the library's to close; the question of a visitor who has answered closes here.
+        if (root && !root.hidden && !root.classList.contains('is-customizing') && !Module.pending()) Module.close();
+    }
+
+    function begin() {
+        impl = live;
+        supersede();
+        window.addEventListener('cookie:consent', onAnswer);
+        window.addEventListener('cookie:open', function () { word(); paint(); });
+        window.addEventListener('cookie:close', paint);
+        document.addEventListener('click', onBefore, true);
+        document.addEventListener('click', onClick);
+        document.addEventListener('keydown', onKey);
+        // The navigation fires on window, Turbo on the document (it bubbles to window: one listener each).
+        window.addEventListener('transparent:load', function () { adopt(); Module.scan(); announce(); });
+        document.addEventListener('turbo:load', function () { adopt(); Module.scan(); announce(); });
+
+        text = null;
+        adopt();
+        if (typeof MutationObserver === 'function' && document.body) {
+            new MutationObserver(function (mutations) {
+                if (mutations.some(function (m) { return m.addedNodes.length || m.removedNodes.length; })) later();
+            }).observe(document.body, { childList: true, subtree: true });
+        }
+    }
+
+    /** Once the page's scripts have run: the library if it is there, the panel as it was otherwise; then the calls kept. */
+    function start() {
+        if (started) return;
+        started = true;
+        read();
+        var found = (window.Flow && window.Flow.cookie) || (window.Cookie && window.Cookie.flow === true ? window.Cookie : null);
+        if (found && typeof found.use === 'function' && settings) {
+            Module = found;
+            begin();
+        } else if (typeof window.ConsentLegacy === 'function') {
+            impl = window.ConsentLegacy();
+        } else {
+            return;
+        }
+        var calls = queue;
+        queue = [];
+        calls.forEach(function (call) {
+            try { impl[call[0]].apply(api, call[1]); } catch (e) { if (window.console) console.error(e); }
+        });
+        if (Module) announce();
+    }
+
+    // Now, before the page's other scripts write anything: what a feature split from another inherits is known to them.
+    if (read()) inheritKept();
+    // On window, capturing: before the listeners the page's scripts put on the document, which may call Consent at once.
+    if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', start, true); else start();
 })();

@@ -1,6 +1,10 @@
 /*
- * omnibase/consent - the circle and its panel. Themed by custom properties a
- * site sets anywhere above the circle (:root, its footer...):
+ * omnibase/consent - the circle and its panel: the question, and the detailed
+ * section under "Personnaliser". The states are on the circle (.ga-cookie):
+ * is-floating (not answered: the panel at the bottom of the screen, where
+ * consent.position says), is-choosing (the detailed section), is-refused.
+ * Themed by custom properties a site sets anywhere above the circle (:root,
+ * its footer...):
  *
  *   --consent-ink        text                 --consent-soft     secondary text, the circle
  *   --consent-bg         the panel            --consent-line     borders
@@ -55,7 +59,7 @@
 }
 .ga-cookie-actions .ga-cookie-accept { background: var(--_accent); border-color: var(--_accent); color: var(--_on-accent); }
 
-/* "Choisir": one switch per feature, the countdown stopped while choosing. */
+/* The switches of consent-legacy.js (a page that still packs @glitchr/cookie), the countdown stopped while choosing. */
 .ga-cookie-features { list-style: none; margin: 0 0 .7rem; padding: 0; display: grid; gap: .45rem; max-height: min(16rem, 45vh); overflow: auto; }
 .ga-cookie-features[hidden] { display: none; }
 .ga-cookie-feature label { display: grid; grid-template-columns: auto 1fr; gap: .1rem .55rem; align-items: start; cursor: pointer; }
@@ -70,13 +74,58 @@
 .ga-cookie-more:has(> [hidden]:first-child + [hidden]) { display: none; }
 .ga-cookie-details { padding: 0; border: 0; background: none; color: var(--_soft); font: inherit; font-size: .8rem; text-decoration: underline; cursor: pointer; }
 .ga-cookie-details[aria-expanded="true"] { color: var(--_ink); }
-.ga-cookie-save { min-height: 1.8rem; padding: .25rem .7rem; border: 1px solid var(--_accent); border-radius: calc(var(--_radius) * .45); background: transparent; color: var(--_accent); font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
+.ga-cookie-close { padding: 0; border: 0; background: none; color: var(--_soft); font: inherit; font-size: .8rem; text-decoration: underline; cursor: pointer; }
+.ga-cookie-save, .ga-cookie-keep { min-height: 1.8rem; padding: .25rem .7rem; border: 1px solid var(--_accent); border-radius: calc(var(--_radius) * .45); background: transparent; color: var(--_accent); font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
 .ga-cookie-more [hidden] { display: none; }
+
+/* "Personnaliser": the detailed section takes the question's place - one row per feature, its switch, what it keeps. */
+.ga-cookie-summary[hidden], .ga-cookie-section[hidden] { display: none; }
+.ga-cookie-section:focus { outline: none; }
+.ga-cookie.is-choosing .ga-cookie-panel.is-customizing { width: min(24rem, calc(100vw - 2rem)); }
+.ga-cookie-panel .ga-cookie-title { margin: 0 0 .6rem; font-weight: 700; }
+.ga-cookie-categories { list-style: none; margin: 0 0 .8rem; padding: 0 .3rem 0 0; display: grid; gap: .7rem; max-height: min(21rem, 50vh); overflow: auto; overscroll-behavior: contain; }
+.ga-cookie-category-head { display: grid; grid-template-columns: auto 1fr; gap: .1rem .6rem; align-items: start; cursor: pointer; }
+.ga-cookie-category-head input {
+    appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 2rem; height: 1.15rem; margin: .12rem 0 0;
+    border: 1px solid var(--_line); border-radius: 1rem; background: var(--_hover); cursor: pointer; transition: background .15s, border-color .15s;
+}
+.ga-cookie-category-head input::after {
+    content: ""; position: absolute; top: 50%; left: .12rem; width: .8rem; height: .8rem; border-radius: 50%;
+    background: var(--_soft); transform: translateY(-50%); transition: left .15s, background .15s;
+}
+.ga-cookie-category-head input:checked { background: var(--_accent); border-color: var(--_accent); }
+.ga-cookie-category-head input:checked::after { left: calc(100% - .92rem); background: var(--_on-accent); }
+.ga-cookie-category-head input:focus-visible { outline: 2px solid var(--_accent); outline-offset: 2px; }
+.ga-cookie-category-head input:disabled { cursor: not-allowed; opacity: .55; }
+.ga-cookie-category-text { display: grid; }
+.ga-cookie-category-text strong { font-weight: 700; }
+.ga-cookie-category-text small, .ga-cookie-required { font-size: .78rem; color: var(--_soft); }
+.ga-cookie-required { font-style: normal; }
+.ga-cookie-required[hidden], .ga-cookie-category-text small[hidden] { display: none; }
+.ga-cookie-stored { margin: .25rem 0 0 2.6rem; font-size: .76rem; color: var(--_soft); }
+.ga-cookie-stored:not(:has(ul:not([hidden]))) { display: none; }
+.ga-cookie-stored summary { width: fit-content; cursor: pointer; text-decoration: underline; }
+.ga-cookie-stored[open] summary { color: var(--_ink); }
+.ga-cookie-stored ul { list-style: none; margin: .35rem 0 0; padding: 0; display: grid; gap: .35rem; }
+.ga-cookie-stored ul[hidden] { display: none; }
+.ga-cookie-entry { display: grid; grid-template-columns: 1fr auto; gap: 0 .6rem; padding-left: .6rem; border-left: 1px solid var(--_line); }
+.ga-cookie-entry [data-consent-entry-name] { color: var(--_ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; overflow-wrap: anywhere; }
+.ga-cookie-entry [data-consent-entry-duration] { text-align: right; white-space: nowrap; }
+.ga-cookie-entry [data-consent-entry-purpose] { grid-column: 1 / -1; }
+.ga-cookie-section .ga-cookie-more { margin-top: .6rem; }
 
 /* Not answered yet: the panel floats at the bottom of the screen, whatever is scrolled. */
 .ga-cookie.is-floating .ga-cookie-panel { position: fixed; left: 1rem; right: auto; top: auto; bottom: 1rem; z-index: 1500; width: min(22rem, calc(100vw - 2rem)); }
+/* consent.position, when it is not the bottom left corner. */
+.ga-cookie.is-floating .ga-cookie-panel[data-consent-position$="-right"] { left: auto; right: 1rem; }
+.ga-cookie.is-floating .ga-cookie-panel[data-consent-position$="-center"] { left: 50%; right: auto; translate: -50% 0; }
+.ga-cookie.is-floating .ga-cookie-panel[data-consent-position^="top-"] { top: 1rem; bottom: auto; }
+.ga-cookie.is-floating.is-choosing .ga-cookie-panel.is-customizing { width: min(24rem, calc(100vw - 2rem)); }
 @media (prefers-reduced-motion: no-preference) {
     .ga-cookie.is-floating .ga-cookie-panel:not([hidden]) { animation: ga-cookie-in .4s cubic-bezier(.2, .9, .3, 1.2) both; }
 }
 @keyframes ga-cookie-in { from { opacity: 0; transform: translateY(1rem); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .ga-cookie-count.is-tick { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+    .ga-cookie-count.is-tick { animation: none; }
+    .ga-cookie-category-head input, .ga-cookie-category-head input::after { transition: none; }
+}

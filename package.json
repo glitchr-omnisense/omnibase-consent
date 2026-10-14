@@ -1,12 +1,13 @@
 {
   "name": "@omnibase/consent",
   "private": true,
-  "description": "The tests of public/js/consent.js; the bundle itself is installed with Composer and has no build step.",
+  "description": "The tests of public/js/consent.js and consent-legacy.js; the bundle itself is installed with Composer and has no build step.",
   "license": "MIT",
   "scripts": {
     "test": "node --test \"tests/js/*.test.mjs\""
   },
   "devDependencies": {
+    "@glitchr/flowjs": "^1.2.0",
     "jsdom": "^25.0.0"
   }
 }
