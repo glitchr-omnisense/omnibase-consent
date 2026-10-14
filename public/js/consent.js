@@ -478,6 +478,13 @@
 
     // Now, before the page's other scripts write anything: what a feature split from another inherits is known to them.
     if (read()) inheritKept();
-    // On window, capturing: before the listeners the page's scripts put on the document, which may call Consent at once.
-    if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', start, true); else start();
+    // A deferred script runs with the document "interactive", DOMContentLoaded still to come: only "complete" says
+    // the page's scripts have run. On window, capturing: before the listeners those scripts put on the document,
+    // which may call Consent at once. (`load` for a script added between the two events.)
+    if (document.readyState === 'complete') {
+        start();
+    } else {
+        window.addEventListener('DOMContentLoaded', start, true);
+        window.addEventListener('load', start);
+    }
 })();

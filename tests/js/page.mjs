@@ -92,8 +92,8 @@ export async function page(body, { library: withLibrary = true, before = null, i
     // jsdom's own document first (it loads after the constructor returns), then ours.
     if (document.readyState !== 'complete') await new Promise((resolve) => window.addEventListener('load', resolve, { once: true }));
 
-    // As while the document is still being read: the deferred scripts run, then DOMContentLoaded.
-    let state = 'loading';
+    // As when the deferred scripts run: the document read ("interactive"), DOMContentLoaded still to come.
+    let state = 'interactive';
     Object.defineProperty(document, 'readyState', { configurable: true, get: () => state });
     document.body.innerHTML = body;
     if (before) before(window);
@@ -101,7 +101,6 @@ export async function page(body, { library: withLibrary = true, before = null, i
     window.eval(scripts.consent);
     if (withLibrary) library.forEach((source) => window.eval(source));
     if (inline) inline(window);
-    state = 'interactive';
     document.dispatchEvent(new window.Event('DOMContentLoaded', { bubbles: true }));
     state = 'complete';
     window.dispatchEvent(new window.Event('load'));
