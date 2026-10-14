@@ -77,8 +77,9 @@
                 </li>
             </template>
             <div class="ga-cookie-actions">
-                <button type="button" class="ga-cookie-accept" data-consent-accept data-consent-text="acceptAll">{{ '@consent.accept_all'|trans }}</button>
-                <button type="button" class="ga-cookie-refuse" data-consent-refuse data-consent-text="refuseAll">{{ '@consent.refuse_all'|trans }}</button>
+                {# data-consent-all, not -accept / -refuse: a circle has one "accept" and one "refuse", the question's. #}
+                <button type="button" class="ga-cookie-accept" data-consent-all="accept" data-consent-text="acceptAll">{{ '@consent.accept_all'|trans }}</button>
+                <button type="button" class="ga-cookie-refuse" data-consent-all="refuse" data-consent-text="refuseAll">{{ '@consent.refuse_all'|trans }}</button>
             </div>
             <div class="ga-cookie-more">
                 <button type="button" class="ga-cookie-close" data-consent-close data-consent-text="close">{{ '@consent.close'|trans }}</button>

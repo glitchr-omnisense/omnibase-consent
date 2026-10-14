@@ -35,7 +35,7 @@ storage:
   timezone: "Ihre Zeitzone."
   visitor: "Eine zufällige Kennung, um Besuche zu zählen."
   third_party: "Die Cookies, die dieser Dienst setzt."
-features:
+categories:
   necessary:
     label: "Der Betrieb der Seite"
     description: "Ihre Sitzung, die Sprache der Seite, der Schutz der Formulare, Ihre Antwort zu den Cookies."
@@ -45,6 +45,10 @@ features:
   location:
     label: "Ihre Zeitzone und Ihr Standort"
     description: "Um Datum und Uhrzeit in Ihrer Zeit zu zeigen; Ihr Standort nur, wenn eine Seite danach fragt."
+features:
+  user:
+    label: "Der Betrieb der Seite"
+    description: "Ihre Sitzung, Ihre Sprache, Ihr Design, Ihre Zeitzone."
   chat:
     label: "Der Chat"
     description: "Das Chatfenster und seine Cookies (Crisp)."

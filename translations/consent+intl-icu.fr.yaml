@@ -35,7 +35,7 @@ storage:
   timezone: "Votre fuseau horaire."
   visitor: "Un identifiant tiré au hasard, pour compter les visites."
   third_party: "Les cookies que ce service dépose."
-features:
+categories:
   necessary:
     label: "Le fonctionnement du site"
     description: "Votre session, la langue du site, la protection des formulaires, votre réponse sur les cookies."
@@ -45,6 +45,10 @@ features:
   location:
     label: "Votre fuseau horaire et votre position"
     description: "Pour afficher les dates et les heures à la vôtre ; votre position, seulement quand une page la demande."
+features:
+  user:
+    label: "Le fonctionnement du site"
+    description: "Votre session, votre langue, votre thème, votre fuseau horaire."
   chat:
     label: "La messagerie"
     description: "La fenêtre de discussion et ses cookies (Crisp)."

@@ -35,7 +35,7 @@ storage:
   timezone: "Your time zone."
   visitor: "An identifier drawn at random, to count visits."
   third_party: "The cookies this service sets."
-features:
+categories:
   necessary:
     label: "How the site works"
     description: "Your session, the site's language, the protection of forms, your answer about cookies."
@@ -45,6 +45,10 @@ features:
   location:
     label: "Your time zone and position"
     description: "To show dates and times in your own; your position, only when a page asks for it."
+features:
+  user:
+    label: "How the site works"
+    description: "Your session, language, theme and time zone."
   chat:
     label: "The chat"
     description: "The chat window and its cookies (Crisp)."

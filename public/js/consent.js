@@ -416,6 +416,9 @@
             Module.open(undefined, opener);
             return;
         }
+        // "Tout accepter", "Tout refuser": the detailed section's own, beside the question's accept and refuse.
+        var all = clicked.closest('[data-consent-all]');
+        if (all) return void (all.getAttribute('data-consent-all') === 'refuse' ? Module.refuse() : Module.accept());
         var toggle = clicked.closest('[data-consent-toggle]');
         var widget = toggle ? toggle.closest(WIDGET) : null;
         if (widget) {

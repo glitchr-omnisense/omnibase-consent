@@ -112,6 +112,11 @@ which a site overrides in its own `translations/consent+intl-icu.<locale>.yaml`:
 - `features.<name>.label` and `.description` - a feature the translations name
   is known to the panel even when the configuration does not declare it: a
   script that uses it gets its words;
+- `categories.<name>.label` and `.description` - the same, read first by the
+  detailed section: the bundle has them for `necessary`, `user` and
+  `location`. (`features.user.*` still says "the site's working": what `USER`
+  means on a page served by `consent-legacy.js`, where it is all of the
+  site's cookies.)
 - `storage.<purpose>` - what an entry is for (a `purpose` that is no key is
   shown as written);
 - `duration.session`, `duration.days`... - the durations (`30d` reads

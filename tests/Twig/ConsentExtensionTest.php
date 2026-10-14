@@ -173,7 +173,8 @@ class ConsentExtensionTest extends TestCase
         $options = $this->extension()->options();
 
         self::assertSame(['USER'], $options['groups']);
-        self::assertSame([['name' => 'USER', 'label' => 'Vos préférences', 'description' => 'La langue et le calendrier de votre navigateur, votre thème.', 'implicit' => true, 'required' => false, 'erase' => []]], $options['features'], 'the bundle\'s own features are the library\'s: this list is the site\'s, as it was');
+        self::assertSame([['name' => 'USER', 'label' => 'Le fonctionnement du site', 'description' => 'Votre session, votre langue, votre thème, votre fuseau horaire.', 'implicit' => true, 'required' => false, 'erase' => []]], $options['features'], 'the bundle\'s own features are the library\'s: this list is the site\'s, with the words it had - USER is all of the site\'s cookies there');
+        self::assertSame(['ANALYTICS', 'CHAT', 'SOCIAL', 'USER'], array_values(array_intersect(['ANALYTICS', 'CHAT', 'SOCIAL', 'USER', 'NECESSARY', 'LOCATION'], array_keys($options['labels']))), 'and the words it had for the features scripts declare');
         self::assertSame(10, $options['countdown']);
         self::assertSame('default', $options['action']);
         self::assertSame('/confidentialite', $options['privacy']);

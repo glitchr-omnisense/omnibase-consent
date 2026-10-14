@@ -149,8 +149,8 @@ class ConsentExtension extends AbstractExtension
 
             $categories[] = [
                 'key' => $name,
-                'label' => $this->text($name, 'label') ?? ucfirst(strtolower($name)),
-                'description' => $this->text($name, 'description'),
+                'label' => $this->category($name, 'label') ?? ucfirst(strtolower($name)),
+                'description' => $this->category($name, 'description'),
                 'default' => $feature['implicit'],
                 'required' => $feature['required'],
                 'onDemand' => $feature['on_demand'],
@@ -348,7 +348,7 @@ class ConsentExtension extends AbstractExtension
         return session_name() ?: 'PHPSESSID';
     }
 
-    /** @return list<string> the feature names under consent.features.* in the current catalogue (bundle's and site's) */
+    /** @return list<string> the feature names under consent.features.* and consent.categories.* in the current catalogue (bundle's and site's) */
     private function knownNames(): array
     {
         if (!$this->translator instanceof TranslatorBagInterface) {
@@ -358,7 +358,7 @@ class ConsentExtension extends AbstractExtension
         for ($catalogue = $this->translator->getCatalogue(); $catalogue; $catalogue = $catalogue->getFallbackCatalogue()) {
             foreach (['consent', 'consent'.MessageCatalogueInterface::INTL_DOMAIN_SUFFIX] as $domain) {
                 foreach (array_keys($catalogue->all($domain)) as $key) {
-                    if (preg_match('/^features\.([^.]+)\.label$/', $key, $match)) {
+                    if (preg_match('/^(?:features|categories)\.([^.]+)\.label$/', $key, $match)) {
                         $names[$match[1]] = true;
                     }
                 }
@@ -372,6 +372,18 @@ class ConsentExtension extends AbstractExtension
     private function text(string $name, string $field): ?string
     {
         return $this->word('features.'.strtolower($name).'.'.$field);
+    }
+
+    /**
+     * A feature's words in the detailed section: consent.categories.<name>.<field>,
+     * else consent.features.<name>.<field>. The first are for the features
+     * whose meaning the detailed section changed - USER, once all of the
+     * site's own cookies, is the visitor's preferences beside NECESSARY and
+     * LOCATION - and leave the second as the pages from before it show them.
+     */
+    private function category(string $name, string $field): ?string
+    {
+        return $this->word('categories.'.strtolower($name).'.'.$field) ?? $this->text($name, $field);
     }
 
     /**

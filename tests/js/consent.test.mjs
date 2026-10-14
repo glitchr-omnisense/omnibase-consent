@@ -36,6 +36,26 @@ test('a first visit: the question floats, counted down, and offers to customize'
     assert.equal(Consent.state('USER'), null);
     assert.equal(Consent.state('NECESSARY'), true);
     assert.equal(document.querySelectorAll('[data-consent-banner]').length, 1);
+    assert.equal(document.querySelectorAll('[data-consent-accept]').length, 1, 'one "accept" and one "refuse" by circle: the question\'s');
+    assert.equal(document.querySelectorAll('[data-consent-refuse]').length, 1);
+});
+
+test('"Tout refuser" and "Tout accepter" of the detailed section', async () => {
+    const { Consent, click, $ } = await page(circle(), { local: { 'cookie/USER': 'true' } });
+
+    click('[data-consent-toggle]');
+    click('[data-consent-details]');
+    click('[data-consent-all="refuse"]');
+    assert.equal(Consent.state('USER'), false);
+    assert.equal(Consent.state('LOCATION'), false);
+    assert.equal(Consent.state('NECESSARY'), true);
+    assert.equal($('#ga-cookie-footer').hidden, true);
+    click('[data-consent-toggle]');
+    click('[data-consent-details]');
+    click('[data-consent-all="accept"]');
+    assert.equal(Consent.state('USER'), true);
+    assert.equal(Consent.state('LOCATION'), true);
+    assert.equal($('#ga-cookie-footer').hidden, true);
 });
 
 test('"Personnaliser": a row per feature, its switch, what it keeps in the visitor\'s words', async () => {

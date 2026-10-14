@@ -35,7 +35,7 @@ storage:
   timezone: "タイムゾーン。"
   visitor: "訪問数を数えるための、無作為に決めたID。"
   third_party: "このサービスが保存するクッキー。"
-features:
+categories:
   necessary:
     label: "サイトの動作"
     description: "セッション、サイトの言語、フォームの保護、クッキーについての回答。"
@@ -45,6 +45,10 @@ features:
   location:
     label: "タイムゾーンと位置情報"
     description: "日付と時刻を現地時間で表示するため。位置情報は、ページが求めたときだけ。"
+features:
+  user:
+    label: "サイトの動作"
+    description: "セッション、言語、テーマ、タイムゾーン。"
   chat:
     label: "チャット"
     description: "チャット画面とそのクッキー（Crisp）。"
