@@ -26,6 +26,15 @@ class ConsentExtension extends AbstractExtension
     ];
 
     /**
+     * What is not the page's: a click there neither answers the question
+     * (dismiss) nor closes the panel - Symfony's web debug toolbar (.sf-toolbar,
+     * open or folded, around sfwdt<token> and its sfToolbar* parts), a dump()
+     * printed in the page, and what a site marks with data-consent-ignore (or
+     * the library's data-cookie-ignore).
+     */
+    public const IGNORE = ['[data-consent-ignore]', '[data-cookie-ignore]', '.sf-toolbar', '[id^="sfwdt"]', '[id^="sfToolbar"]', '.sf-dump'];
+
+    /**
      * @param array<string, mixed>                $config   the site's consent: configuration
      * @param array<string, array<string, mixed>> $defaults the bundle's own features (config/features.php)
      */
@@ -52,7 +61,7 @@ class ConsentExtension extends AbstractExtension
      * partial has always handed them (data-consent-features): what a page
      * whose scripts are from before @glitchr/flowjs/cookie still reads.
      *
-     * @return array{labels: array<string, array{label: string, description: ?string}>, groups: list<string>, features: list<array{name: string, label: string, description: ?string, implicit: bool, required: bool, erase: list<string>}>, countdown: int, action: string, erase: list<string>, privacy: ?string}
+     * @return array{labels: array<string, array{label: string, description: ?string}>, groups: list<string>, features: list<array{name: string, label: string, description: ?string, implicit: bool, required: bool, erase: list<string>}>, countdown: int, action: string, dismiss: string, ignore: list<string>, erase: list<string>, privacy: ?string}
      */
     public function options(): array
     {
@@ -97,6 +106,8 @@ class ConsentExtension extends AbstractExtension
             'features' => $list,
             'countdown' => (int) $this->config['countdown'],
             'action' => (string) ($this->config['countdown_action'] ?? 'default'),
+            'dismiss' => (string) ($this->config['dismiss'] ?? 'none'),
+            'ignore' => $this->ignore(),
             'erase' => array_values($this->config['erase_on_refuse']),
             'privacy' => $this->privacy(),
         ];
@@ -174,7 +185,8 @@ class ConsentExtension extends AbstractExtension
         $action = (string) ($this->config['countdown_action'] ?? 'default');
         $settings = [
             'reopen' => $this->config['reopen'] ?? 'banner',
-            'dismiss' => $this->config['dismiss'] ?? 'default',
+            'dismiss' => $this->config['dismiss'] ?? 'none',
+            'ignore' => $this->ignore(),
             'countdown' => $countdown > 0 ? ['duration' => $countdown, 'action' => $action] : false,
             'record' => ['lifetime' => $lifetime],
             'signals' => ['gpc' => $this->config['signals']['gpc'] ?? false, 'dnt' => $this->config['signals']['dnt'] ?? false],
@@ -190,6 +202,18 @@ class ConsentExtension extends AbstractExtension
 
         // The site's free options underneath: what is said by name above wins.
         return array_replace_recursive($options, $settings);
+    }
+
+    /**
+     * The selectors of what is not the page's: the bundle's own, then the site's (consent.ignore).
+     *
+     * @return list<string>
+     */
+    private function ignore(): array
+    {
+        $site = array_filter(array_map(static fn ($selector): string => trim((string) $selector), (array) ($this->config['ignore'] ?? [])), static fn (string $selector): bool => '' !== $selector);
+
+        return array_values(array_unique([...self::IGNORE, ...$site]));
     }
 
     /** settings(), for a <script type="application/json">: no "<" left to end the script with. */

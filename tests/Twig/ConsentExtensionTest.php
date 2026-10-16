@@ -70,7 +70,10 @@ class ConsentExtensionTest extends TestCase
         self::assertSame(['lifetime' => '180d'], $settings['record']);
         self::assertSame('bottom-left', $settings['position']);
         self::assertSame('banner', $settings['reopen']);
-        self::assertSame('default', $settings['dismiss']);
+        self::assertSame('none', $settings['dismiss']);
+        self::assertContains('.sf-toolbar', $settings['ignore'], 'a click on Symfony\'s web debug toolbar is not on the page');
+        self::assertContains('[id^="sfwdt"]', $settings['ignore']);
+        self::assertContains('[data-consent-ignore]', $settings['ignore']);
         self::assertArrayNotHasKey('version', $settings);
         self::assertSame('USER', $settings['consent']['primary']);
         self::assertSame(['LOCATION' => 'USER'], (array) $settings['consent']['inherits'], 'split from USER: its answer is taken over');
@@ -208,6 +211,8 @@ class ConsentExtensionTest extends TestCase
         self::assertSame([['name' => 'USER', 'label' => 'Le fonctionnement du site', 'description' => 'Votre session, votre langue, votre thème, votre fuseau horaire.', 'implicit' => true, 'required' => false, 'erase' => []]], $options['features'], 'the bundle\'s own features are the library\'s: this list is the site\'s, with the words it had - USER is all of the site\'s cookies there');
         self::assertSame(['ANALYTICS', 'CHAT', 'SOCIAL', 'USER'], array_values(array_intersect(['ANALYTICS', 'CHAT', 'SOCIAL', 'USER', 'NECESSARY', 'LOCATION'], array_keys($options['labels']))), 'and the words it had for the features scripts declare');
         self::assertSame(10, $options['countdown']);
+        self::assertSame('none', $options['dismiss']);
+        self::assertSame(ConsentExtension::IGNORE, $options['ignore']);
         self::assertSame('default', $options['action']);
         self::assertSame('/confidentialite', $options['privacy']);
         self::assertArrayHasKey('ANALYTICS', $options['labels']);
@@ -241,5 +246,15 @@ class ConsentExtensionTest extends TestCase
                 }
             }
         }
+    }
+
+    public function testASiteSaysWhatAClickElsewhereAnswersAndWhatIsNotThePage(): void
+    {
+        $extension = $this->extension(['dismiss' => 'refuse', 'ignore' => ['#admin-bar', ' ', '.sf-toolbar']]);
+        $settings = $extension->settings();
+
+        self::assertSame('refuse', $settings['dismiss']);
+        self::assertSame([...ConsentExtension::IGNORE, '#admin-bar'], $settings['ignore'], 'the site\'s selectors after the bundle\'s, once each');
+        self::assertSame('refuse', $extension->options()['dismiss']);
     }
 }

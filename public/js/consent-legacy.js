@@ -13,7 +13,8 @@
  * through window.Cookie when the page has it - so turning a feature off also
  * deletes its cookies.
  *
- * It reads the circle's data-consent-features, -labels, -countdown and -erase,
+ * It reads the circle's data-consent-features, -labels, -countdown, -erase,
+ * -dismiss and -ignore,
  * the list .ga-cookie-features and the buttons [data-consent-details] and
  * [data-consent-save] of the partial.
  */
@@ -380,6 +381,13 @@
         order.forEach(function (name) { if (enabled(name)) wake(name, root); });
     }
 
+    function ignoredClick(target) {
+        var circle = floating || widgets[0];
+        var list;
+        try { list = JSON.parse((circle && circle.dataset.consentIgnore) || '[]'); } catch (e) { list = []; }
+        return list.some(function (selector) { try { return !!target.closest(selector); } catch (e) { return false; } });
+    }
+
     document.addEventListener('click', function (event) {
         var target = event.target instanceof Element ? event.target : null;
         if (!target) return;
@@ -394,8 +402,14 @@
             return;
         }
         if (!widget) {
-            // A click elsewhere: the floating panel, left without a word, takes the implicit answer; the others close.
-            if (floating && !answered() && !floating.classList.contains('is-choosing') && visible(panel(floating))) return decide(implicitChoice());
+            // What is not the page's (consent.ignore: Symfony's web debug toolbar...): no click elsewhere.
+            if (ignoredClick(target)) return;
+            // A click elsewhere: the floating panel, left without a word, takes the implicit answer if consent.dismiss
+            // says so (none by default: it stays); the others close.
+            var dismiss = floating ? floating.dataset.consentDismiss || 'none' : 'none';
+            if (floating && dismiss !== 'none' && !answered() && !floating.classList.contains('is-choosing') && visible(panel(floating))) {
+                return decide(dismiss === 'accept' ? choice(function () { return true; }) : dismiss === 'refuse' ? choice(function () { return false; }) : implicitChoice());
+            }
             widgets.forEach(function (w) { if (!w.classList.contains('is-floating')) close(w); });
             return;
         }

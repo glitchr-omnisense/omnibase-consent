@@ -29,7 +29,8 @@ const attribute = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, 
 /** What consent_settings() prints for a site with these features (the bundle's own by default). */
 export function settings(more = {}) {
     return {
-        position: 'bottom-left', reopen: 'banner', dismiss: 'default',
+        position: 'bottom-left', reopen: 'banner', dismiss: 'none',
+        ignore: ['[data-consent-ignore]', '[data-cookie-ignore]', '.sf-toolbar', '[id^="sfwdt"]', '[id^="sfToolbar"]', '.sf-dump'],
         countdown: false,
         record: { lifetime: '180d' },
         signals: { gpc: false, dnt: false },
@@ -60,6 +61,8 @@ export function circle({ place = 'footer', floating = true, countdown = 0, featu
         if (expression === '_options.features|json_encode') return attribute(JSON.stringify(features));
         if (expression === '_options.labels|json_encode') return attribute('{}');
         if (expression === '_options.erase|json_encode') return attribute('[]');
+        if (expression === '_options.dismiss') return attribute(config.dismiss || 'none');
+        if (expression === '_options.ignore|json_encode') return attribute(JSON.stringify(config.ignore || []));
         if (expression.includes('implicit')) return '[implicit <span class="ga-cookie-count" data-consent-count>' + countdown + '</span>]';
         const key = /'@consent\.([a-z_]+)'\|trans/.exec(expression);
         if (key) return '[' + key[1] + ']';
