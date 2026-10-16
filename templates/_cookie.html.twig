@@ -26,7 +26,8 @@
  # @glitchr/cookie) is served by consent-legacy.js, which reads the
  # data-consent-* attributes of the circle and the two parts marked "legacy".
  #
- # Anything with `data-consent-open` (a "Cookies" link of a sitemap) opens the panel.
+ # Anything with `data-consent-open` (a "Cookies" link of a sitemap) opens the panel:
+ # once answered, the detailed section with the switches as recorded (consent.reopen).
  # The look: bundles/consent/css/consent.css, themed by --consent-* properties.
  #}
 {% set _options = consent_options() %}

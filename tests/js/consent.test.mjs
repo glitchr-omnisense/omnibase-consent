@@ -44,14 +44,13 @@ test('"Tout refuser" and "Tout accepter" of the detailed section', async () => {
     const { Consent, click, $ } = await page(circle(), { local: { 'cookie/USER': 'true' } });
 
     click('[data-consent-toggle]');
-    click('[data-consent-details]');
+    assert.equal($('[data-consent-section]').hidden, false, 'answered: the circle opens the detailed section');
     click('[data-consent-all="refuse"]');
     assert.equal(Consent.state('USER'), false);
     assert.equal(Consent.state('LOCATION'), false);
     assert.equal(Consent.state('NECESSARY'), true);
     assert.equal($('#ga-cookie-footer').hidden, true);
     click('[data-consent-toggle]');
-    click('[data-consent-details]');
     click('[data-consent-all="accept"]');
     assert.equal(Consent.state('USER'), true);
     assert.equal(Consent.state('LOCATION'), true);
@@ -113,11 +112,12 @@ test('refused, a feature writes nothing and what it kept is erased; accepted, it
     assert.equal(heard.join(' | '), 'change {"NECESSARY":true,"USER":false,"LOCATION":false,"ANALYTICS":false} false | ga');
 
     heard.length = 0;
-    // The circle opens the question again; "D'accord" there.
+    // The circle opens the detailed section, the switches as refused; "Tout accepter" there.
     click('[data-consent-toggle]');
     assert.equal($('#ga-cookie-footer').hidden, false);
     assert.equal($('#circle-footer').classList.contains('is-floating'), false, 'answered: under its circle, not floating');
-    click('[data-consent-accept]');
+    assert.equal($('[data-consent-switch="USER"]').checked, false);
+    click('[data-consent-all="accept"]');
     assert.equal(heard[0], 'user', 'user:consent for the scripts that wait for it');
     info(window); zone(window);
     assert.equal(has('USER/INFO') && has('LOCATION/TIMEZONE'), true);
@@ -174,7 +174,6 @@ test('window.Consent before the library is there: the calls are kept, answered f
     assert.deepEqual(calls, ['user true', 'state true true false', 'user on', 'captcha false'], 'kept, then made once the library is there; a listener of DOMContentLoaded finds it ready');
     assert.equal(Consent.undecided(), false, 'a feature a script declares is no reason to ask again');
     click('[data-consent-toggle]');
-    click('[data-consent-details]');
     assert.equal($('[data-consent-row="CAPTCHA"] [data-consent-label]').textContent, 'The captcha', 'its switch is there');
     $('[data-consent-switch="CAPTCHA"]').click();
     click('[data-consent-keep]');
@@ -200,7 +199,6 @@ test('a group nobody declared becomes a feature, unwritten until the visitor say
     assert.equal(has('CHAT/ID'), true);
     assert.equal(Consent.cookie('ANALYTICS', 'VISITOR_ID', 'abc', 3600), true);
     click('[data-consent-toggle]');
-    click('[data-consent-details]');
     assert.equal($('[data-consent-row="ANALYTICS"] [data-consent-label]').textContent, 'Audience', 'with the site\'s words');
     assert.equal($('[data-consent-row="STATS"] [data-consent-label]').textContent, 'Stats');
 });
@@ -259,6 +257,52 @@ test('several circles share the panel: under the first while it floats, under th
     Consent.refuse();
     assert.equal(Consent.refused(), true);
     assert.deepEqual(errors, []);
+});
+
+test('answered by the countdown, the circle and a "Cookies" link show what was recorded: the switches, "Tout accepter", "Tout refuser", "Fermer"', async () => {
+    const { Consent, click, key, $ } = await page(circle({ countdown: 1, config: settings({ countdown: { duration: '300ms', action: 'default' } }) }) + '<script type="text/plain" data-consent-script="ANALYTICS"></script><a href="#" data-consent-open id="link">cookies</a><main id="elsewhere"></main>');
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    assert.equal(Consent.undecided(), false, 'the countdown answered');
+    assert.equal($('#ga-cookie-footer').hidden, true);
+
+    click('[data-consent-toggle]');
+    assert.equal($('#ga-cookie-footer').hidden, false);
+    assert.equal($('[data-consent-section]').hidden, false, 'one click: the detailed section');
+    assert.equal($('[data-consent-summary]').hidden, true, 'not the question again');
+    assert.equal($('#circle-footer').classList.contains('is-choosing'), true);
+    assert.equal($('[data-consent-switch="NECESSARY"]').checked, true);
+    assert.equal($('[data-consent-switch="USER"]').checked, true, 'as recorded: the implicit features on');
+    assert.equal($('[data-consent-switch="LOCATION"]').checked, true);
+    assert.equal($('[data-consent-switch="ANALYTICS"]').checked, false, 'the tracker off');
+    assert.equal($('[data-consent-all="accept"]').hidden, false);
+    assert.equal($('[data-consent-all="refuse"]').hidden, false);
+
+    click('[data-consent-close]');
+    assert.equal($('#ga-cookie-footer').hidden, true, '"Fermer" closes it');
+    assert.equal(Consent.state('ANALYTICS'), false, 'and answers nothing');
+
+    click('#link');
+    assert.equal($('[data-consent-section]').hidden, false, 'a "Cookies" link opens it the same way');
+    click('[data-consent-all="refuse"]');
+    assert.equal(Consent.refused(), true);
+    assert.equal($('#ga-cookie-footer').hidden, true);
+    click('[data-consent-toggle]');
+    assert.equal($('[data-consent-switch="USER"]').checked, false, 'opened again, the refusal');
+    click('[data-consent-all="accept"]');
+    assert.equal(Consent.state('ANALYTICS'), true);
+    Consent.open();
+    assert.equal($('[data-consent-switch="ANALYTICS"]').checked, true);
+    key('Escape');
+    assert.equal($('#ga-cookie-footer').hidden, true, 'Escape closes it too');
+    click('[data-consent-toggle]');
+    click('#elsewhere');
+    assert.equal($('#ga-cookie-footer').hidden, true, 'and a click elsewhere');
+
+    // consent.reopen: banner - the question again, the switches one click further.
+    const asked = await page(circle({ config: settings({ reopen: 'banner' }) }), { local: { 'cookie/USER': 'true' } });
+    asked.click('[data-consent-toggle]');
+    assert.equal(asked.$('[data-consent-summary]').hidden, false);
+    assert.equal(asked.$('[data-consent-section]').hidden, true);
 });
 
 test('a circle that must not float leaves the question to the other', async () => {
@@ -325,7 +369,6 @@ test('another page\'s configuration (the navigation): its words, the same answer
     assert.equal(Consent.undecided(), false);
     assert.equal($('[data-consent-details]').hidden, false);
     click('[data-consent-toggle]');
-    click('[data-consent-details]');
     assert.equal($('[data-consent-row="USER"] [data-consent-label]').textContent, 'Vos préférences');
     assert.equal($('#ga-cookie-footer').hidden, false);
 });

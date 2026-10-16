@@ -26,6 +26,11 @@ controller in every site.
   not on the page: it neither answers nor closes the panel.
 - Anything with `data-consent-open` opens the panel - a "Cookies" entry of a
   sitemap, a link of the privacy page.
+- Once answered (by the visitor, or by the countdown), the circle and the
+  "Cookies" links open the detailed section (`reopen: details`): each switch
+  as the answer was recorded, "Tout accepter", "Tout refuser", "Enregistrer mes choix"
+  and "Fermer" - what was kept is seen at once, not one click further.
+  `reopen: banner` asks the question again instead.
 - The work is done by [`@glitchr/flowjs/cookie`](https://github.com/glitchr-studio/flowjs/blob/main/docs/cookie.md)
   (the `Cookie` global omnibase loads on every page): the answer and where it
   is kept, asking again, the countdown, the detailed section, the erasing.
@@ -79,7 +84,7 @@ consent:
     countdown_action: default    # default (each feature its default) | accept | refuse
     dismiss: none                # a click elsewhere while the question floats: none (it stays) | default | accept | refuse
     ignore: []                   # selectors whose clicks are not on the page, besides Symfony's toolbar and [data-consent-ignore]
-    reopen: banner               # what the circle shows once answered: banner (the question) | details
+    reopen: details              # what the circle and the "Cookies" links show once answered: details (the switches as recorded) | banner (the question)
     position: bottom-left        # where the question floats: bottom-right, bottom-center, top-left...
     lifetime: 180d               # how long an answer counts
     version: ~                   # changed, every visitor is asked again
