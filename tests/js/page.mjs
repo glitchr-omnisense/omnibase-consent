@@ -29,7 +29,7 @@ const attribute = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, 
 /** What consent_settings() prints for a site with these features (the bundle's own by default). */
 export function settings(more = {}) {
     return {
-        position: 'bottom-left', reopen: 'banner', dismiss: 'none',
+        position: 'bottom-left', reopen: 'details', dismiss: 'none',
         ignore: ['[data-consent-ignore]', '[data-cookie-ignore]', '.sf-toolbar', '[id^="sfwdt"]', '[id^="sfToolbar"]', '.sf-dump'],
         countdown: false,
         record: { lifetime: '180d' },

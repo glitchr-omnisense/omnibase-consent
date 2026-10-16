@@ -69,7 +69,7 @@ class ConsentExtensionTest extends TestCase
         self::assertSame(['duration' => 10, 'action' => 'default'], $settings['countdown']);
         self::assertSame(['lifetime' => '180d'], $settings['record']);
         self::assertSame('bottom-left', $settings['position']);
-        self::assertSame('banner', $settings['reopen']);
+        self::assertSame('details', $settings['reopen'], 'answered, the circle and the "Cookies" links open the detailed section');
         self::assertSame('none', $settings['dismiss']);
         self::assertContains('.sf-toolbar', $settings['ignore'], 'a click on Symfony\'s web debug toolbar is not on the page');
         self::assertContains('[id^="sfwdt"]', $settings['ignore']);
@@ -93,7 +93,7 @@ class ConsentExtensionTest extends TestCase
             'lifetime' => '13mo',
             'countdown' => 0,
             'position' => 'bottom-right',
-            'reopen' => 'details',
+            'reopen' => 'banner',
             'signals' => ['gpc' => true, 'dnt' => ['ANALYTICS']],
             'erase_on_refuse' => ['legacy-'],
             'features' => [
@@ -126,7 +126,7 @@ class ConsentExtensionTest extends TestCase
         self::assertSame('2026-10', $settings['version']);
         self::assertSame(['lifetime' => '13mo'], $settings['record']);
         self::assertSame('bottom-right', $settings['position']);
-        self::assertSame('details', $settings['reopen']);
+        self::assertSame('banner', $settings['reopen'], 'a site may still ask the question again');
         self::assertSame(['gpc' => true, 'dnt' => ['ANALYTICS']], $settings['signals']);
         self::assertSame('13mo', array_column($categories['NECESSARY']['storage'], null, 'name')['cookie-consent']['duration']);
         self::assertSame('1 an', ((array) $settings['consent']['durations'])['1y']);

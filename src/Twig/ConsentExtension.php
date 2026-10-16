@@ -184,7 +184,7 @@ class ConsentExtension extends AbstractExtension
         $countdown = (int) $this->config['countdown'];
         $action = (string) ($this->config['countdown_action'] ?? 'default');
         $settings = [
-            'reopen' => $this->config['reopen'] ?? 'banner',
+            'reopen' => $this->config['reopen'] ?? 'details',
             'dismiss' => $this->config['dismiss'] ?? 'none',
             'ignore' => $this->ignore(),
             'countdown' => $countdown > 0 ? ['duration' => $countdown, 'action' => $action] : false,

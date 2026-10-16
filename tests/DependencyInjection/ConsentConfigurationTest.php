@@ -24,7 +24,7 @@ class ConsentConfigurationTest extends TestCase
         self::assertSame('default', $config['countdown_action']);
         self::assertSame('none', $config['dismiss'], 'a click elsewhere answers nothing: the question waits for the visitor, or the countdown');
         self::assertSame([], $config['ignore']);
-        self::assertSame('banner', $config['reopen']);
+        self::assertSame('details', $config['reopen'], 'answered, the circle opens the switches as they were recorded');
         self::assertSame('bottom-left', $config['position']);
         self::assertSame('180d', $config['lifetime']);
         self::assertNull($config['version']);
