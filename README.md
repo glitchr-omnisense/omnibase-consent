@@ -16,10 +16,14 @@ controller in every site.
   it had kept is erased; accepted again, it writes again. A tracker never
   starts without a yes.
 - A visitor who has not answered sees the panel float at the bottom of the
-  screen with a countdown (`consent.countdown`, 10 s): when the time is up -
-  or on a click elsewhere - each feature takes its default, the site's own on
-  and the rest off. `countdown: 0` waits for an answer; `countdown_action`
-  makes no answer a yes to everything, or a no.
+  screen with a countdown (`consent.countdown`, 10 s): when the time is up,
+  each feature takes its default, the site's own on and the rest off.
+  `countdown: 0` waits for an answer; `countdown_action` makes no answer a yes
+  to everything, or a no. A click elsewhere answers nothing (`dismiss: none`):
+  the question stays until the visitor answers or the countdown, which they
+  can read, runs out. A click on Symfony's web debug toolbar, a `dump()`, or
+  anything marked `data-consent-ignore` (`consent.ignore` adds selectors) is
+  not on the page: it neither answers nor closes the panel.
 - Anything with `data-consent-open` opens the panel - a "Cookies" entry of a
   sitemap, a link of the privacy page.
 - The work is done by [`@glitchr/flowjs/cookie`](https://github.com/glitchr-studio/flowjs/blob/main/docs/cookie.md)
@@ -73,7 +77,8 @@ consent:
     groups: [USER]               # the site's own features: on until refused; the first is "the site's answer" (Consent.refused())
     countdown: 10                # seconds before no answer is an answer; 0 = wait for one
     countdown_action: default    # default (each feature its default) | accept | refuse
-    dismiss: default             # a click elsewhere while the question floats: default | accept | refuse | none
+    dismiss: none                # a click elsewhere while the question floats: none (it stays) | default | accept | refuse
+    ignore: []                   # selectors whose clicks are not on the page, besides Symfony's toolbar and [data-consent-ignore]
     reopen: banner               # what the circle shows once answered: banner (the question) | details
     position: bottom-left        # where the question floats: bottom-right, bottom-center, top-left...
     lifetime: 180d               # how long an answer counts

@@ -267,7 +267,7 @@ test('a circle that must not float leaves the question to the other', async () =
     assert.equal($('#circle-footer').classList.contains('is-floating'), true);
 });
 
-test('no answer: when the time is up the implicit features are on, the rest off; a click elsewhere answers the same', async () => {
+test('no answer: when the time is up the implicit features are on, the rest off; a click elsewhere answers only if consent.dismiss says so', async () => {
     const counted = await page(circle({ countdown: 1, config: settings({ countdown: { duration: '300ms', action: 'default' } }) }) + '<script type="text/plain" data-consent-script="ANALYTICS"></script>');
     assert.equal(counted.Consent.undecided(), true);
     await counted.after(700);
@@ -276,15 +276,41 @@ test('no answer: when the time is up the implicit features are on, the rest off;
     assert.equal(counted.Consent.state('ANALYTICS'), false, 'a tracker never starts by itself');
     assert.equal(counted.$('#ga-cookie-footer').hidden, true);
 
-    const elsewhere = await page(circle() + '<main id="elsewhere"></main>');
-    elsewhere.click('#elsewhere');
-    assert.equal(elsewhere.Consent.undecided(), false);
-    assert.equal(elsewhere.Consent.state('USER'), true);
-
-    const waits = await page(circle({ config: settings({ dismiss: 'none' }) }) + '<main id="elsewhere"></main>');
+    const waits = await page(circle() + '<main id="elsewhere"></main>');
     waits.click('#elsewhere');
-    assert.equal(waits.Consent.undecided(), true, 'dismiss: none - the question stays');
+    assert.equal(waits.Consent.undecided(), true, 'dismiss: none, the default - the question stays');
     assert.equal(waits.$('#ga-cookie-footer').hidden, false);
+
+    const elsewhere = await page(circle({ config: settings({ dismiss: 'default' }) }) + '<main id="elsewhere"></main>');
+    elsewhere.click('#elsewhere');
+    assert.equal(elsewhere.Consent.undecided(), false, 'dismiss: default - a click elsewhere keeps the defaults');
+    assert.equal(elsewhere.Consent.state('USER'), true);
+});
+
+test('a click on Symfony\'s web debug toolbar, or what consent.ignore names, is not on the page', async () => {
+    const toolbar = '<div class="sf-toolbar sf-toolbar-opened"><div id="sfwdtabc123"><button id="tool">a panel of the toolbar</button></div></div>'
+        + '<button class="sf-toolbar-toggle-button" id="sfToolbarToggleButton-abc123">fold</button>'
+        + '<aside data-consent-ignore><button id="mine">a tool of the site</button></aside><main id="elsewhere"></main>';
+
+    // Floating, under a dismiss that answers: the toolbar answers nothing, and the question stays.
+    const floating = await page(circle({ config: settings({ dismiss: 'default' }) }) + toolbar);
+    floating.click('#tool');
+    floating.click('#sfToolbarToggleButton-abc123');
+    floating.click('#mine');
+    assert.equal(floating.Consent.undecided(), true, 'nothing answered by a click on the toolbar');
+    assert.equal(floating.$('#ga-cookie-footer').hidden, false, 'the question still floats');
+    floating.click('#elsewhere');
+    assert.equal(floating.Consent.undecided(), false, 'the page itself is still elsewhere');
+
+    // Answered, the panel opened again: the toolbar leaves it open, the page closes it.
+    const answered = await page(circle() + toolbar);
+    answered.Consent.accept();
+    answered.click('[data-consent-toggle]');
+    assert.equal(answered.$('#ga-cookie-footer').hidden, false);
+    answered.click('#tool');
+    assert.equal(answered.$('#ga-cookie-footer').hidden, false, 'a click on the toolbar does not close it');
+    answered.click('#elsewhere');
+    assert.equal(answered.$('#ga-cookie-footer').hidden, true, 'a click elsewhere does');
 });
 
 test('another page\'s configuration (the navigation): its words, the same answer', async () => {

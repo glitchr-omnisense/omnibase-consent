@@ -396,6 +396,19 @@
         window.dispatchEvent(new Event('ga:cookie'));
     }
 
+    /**
+     * Whether a click there is not on the page: in what consent.ignore names (Symfony's web debug toolbar,
+     * [data-consent-ignore]...). Asked of the library when it knows (@glitchr/flowjs 1.3.1, its ignore option).
+     */
+    function ignored(element) {
+        if (typeof Module.ignored === 'function') return Module.ignored(element);
+        var list = settings && settings.ignore;
+        if (!list) return false;
+        return (Array.isArray(list) ? list : [list]).some(function (selector) {
+            try { return typeof selector === 'string' && !!element.closest(selector); } catch (e) { return false; }
+        });
+    }
+
     /** Before the library hears the click: how things stood, and the panel where the visitor can see it. */
     function onBefore(event) {
         var root = banner();
@@ -422,7 +435,7 @@
         var toggle = clicked.closest('[data-consent-toggle]');
         var widget = toggle ? toggle.closest(WIDGET) : null;
         if (widget) {
-            // Floating, the library took this click for one elsewhere: answered as consent.dismiss says, or left open.
+            // Floating, the library took this click for one elsewhere: left open (consent.dismiss none), or answered as it says.
             if (before.open && before.pending) return;
             var root = banner();
             if (before.open && root && widget.contains(root)) return void Module.close();
@@ -430,7 +443,8 @@
             Module.open(undefined, toggle);
             return;
         }
-        // A click elsewhere closes the panel of a visitor who has answered.
+        // A click elsewhere closes the panel of a visitor who has answered - not one on what is not the page's.
+        if (ignored(clicked)) return;
         var shown = banner();
         if (before.open && !before.pending && shown && !shown.contains(clicked)) Module.close();
     }

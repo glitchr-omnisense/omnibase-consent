@@ -9,7 +9,7 @@
 // an answer, a click elsewhere or Escape.
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { circle as partial, closeAll, page as open } from './page.mjs';
+import { circle as partial, closeAll, page as open, settings } from './page.mjs';
 
 afterEach(closeAll);
 
@@ -103,4 +103,22 @@ test('the panel still opens and closes', async () => {
     assert.equal(panel.hidden, false);
     click(window, toggle);
     assert.equal(panel.hidden, true);
+});
+
+test('a click elsewhere answers only if consent.dismiss says so, never one on the toolbar', async () => {
+    const body = (dismiss) => partial({ place: 'bar', features: [{ name: 'USER', implicit: true }, { name: 'CHAT' }], config: settings({ dismiss }) })
+        + '<div class="sf-toolbar"><div id="sfwdt1"><button id="tool"></button></div></div><main id="elsewhere"></main>';
+
+    const waits = await page(body('none'));
+    click(waits.window, waits.document.querySelector('#elsewhere'));
+    assert.equal(waits.Consent.undecided(), true, 'dismiss: none - the question stays');
+
+    // jsdom lays nothing out: the floating panel is taken for one the visitor can see.
+    const answers = await page(body('default'), { before: (window) => { window.Element.prototype.checkVisibility = () => true; } });
+    click(answers.window, answers.document.querySelector('#tool'));
+    assert.equal(answers.Consent.undecided(), true, 'the toolbar is not the page');
+    click(answers.window, answers.document.querySelector('#elsewhere'));
+    assert.equal(answers.Consent.undecided(), false, 'dismiss: default - a click elsewhere takes the implicit answer');
+    assert.equal(answers.Consent.state('USER'), true);
+    assert.equal(answers.Consent.state('CHAT'), false);
 });
