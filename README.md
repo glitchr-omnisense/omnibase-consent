@@ -225,7 +225,7 @@ npm install && npm test     # node --test, on jsdom: the partial itself, consent
 vendor/bin/phpunit          # the configuration, what the partial prints, every language's words
 ```
 
-In omnibase's harness (`glitchr/omnibase`, `docker/`), on this checkout:
+In omnibase's harness (`omniscient/omnibase`, `docker/`), on this checkout:
 
 ```bash
 docker compose -f compose.yml run --rm -v /path/to/consent:/srv/demo/vendor/omnibase/consent omnibase test consent
