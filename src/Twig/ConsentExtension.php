@@ -2,9 +2,9 @@
 
 namespace Base\Consent\Twig;
 
-use Base\Routing\AdvancedRouterInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Translation\MessageCatalogueInterface;
 use Symfony\Component\Translation\TranslatorBagInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -40,8 +40,9 @@ class ConsentExtension extends AbstractExtension
      */
     public function __construct(
         #[Autowire('%consent.config%')] private readonly array $config,
-        // omnibase's router: the URL in the visitor's language (/datenschutz, not /confidentialite).
-        private readonly AdvancedRouterInterface $urls,
+        // omnibase's router: the URL in the visitor's language (/datenschutz, not /confidentialite). Any URL
+        // generator will do: a framework without omnibase (Laravel, plan 0 rule 13) hands its own.
+        #[Autowire(service: 'Base\Routing\AdvancedRouterInterface')] private readonly UrlGeneratorInterface $urls,
         private readonly TranslatorInterface $translator,
         #[Autowire('%consent.defaults%')] private readonly array $defaults = [],
         private readonly ?RequestStack $requests = null,
