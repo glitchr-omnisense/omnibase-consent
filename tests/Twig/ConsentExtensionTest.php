@@ -6,6 +6,10 @@ use Base\Consent\Tests\DependencyInjection\ConsentConfigurationTest;
 use Base\Consent\Twig\ConsentExtension;
 use Base\Routing\AdvancedRouterInterface;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Routing\Generator\UrlGenerator;
+use Symfony\Component\Routing\RequestContext;
+use Symfony\Component\Routing\Route;
+use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
@@ -201,6 +205,25 @@ class ConsentExtensionTest extends TestCase
         self::assertStringNotContainsString('<', $json);
         self::assertSame('Vos préférences', array_column(json_decode($json, true)['categories'], 'label', 'key')['USER']);
         self::assertStringContainsString('<a href="/confidentialite">', json_decode($json, true)['texts']['text']['html']);
+    }
+
+    /**
+     * Any URL generator will do, not only omnibase's router: a framework
+     * without omnibase (Laravel, rendering the same templates) hands its own.
+     */
+    public function testAPlainUrlGeneratorGivesThePrivacyPage(): void
+    {
+        $routes = new RouteCollection();
+        $routes->add('widget_page', new Route('/page/{slug}'));
+        $translator = new Translator('fr');
+        $translator->addLoader('yaml', new YamlFileLoader());
+        $translator->addResource('yaml', \dirname(__DIR__, 2).'/translations/consent+intl-icu.fr.yaml', 'fr', 'consent+intl-icu');
+        $config = ConsentConfigurationTest::process(['privacy_route' => 'widget_page', 'privacy_route_parameters' => ['slug' => 'politique-de-confidentialite']]);
+
+        $extension = new ConsentExtension($config, new UrlGenerator($routes, new RequestContext()), $translator, require \dirname(__DIR__, 2).'/config/features.php');
+
+        self::assertSame('/page/politique-de-confidentialite', $extension->options()['privacy']);
+        self::assertStringContainsString('/page/politique-de-confidentialite', $extension->settings()['texts']['text']['html']);
     }
 
     public function testThePartialStillHandsWhatAPageFromBeforeTheLibraryReads(): void
