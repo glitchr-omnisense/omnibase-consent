@@ -13,6 +13,7 @@
  *   --consent-hover      the circle under the pointer
  *   --consent-radius     the panel's corners  --consent-font     the panel's font
  *   --consent-shadow     the panel's shadow   --consent-size     the circle
+ *   --consent-gutter     the room the panel keeps from the screen's edges (1rem; a phone's safe area if wider)
  */
 .ga-cookie {
     --_ink: var(--consent-ink, #1c2b3a);
@@ -26,6 +27,9 @@
     --_radius: var(--consent-radius, 14px);
     --_shadow: var(--consent-shadow, 0 12px 30px rgba(28, 43, 58, .16));
     --_size: var(--consent-size, 2rem);
+    --_gutter: var(--consent-gutter, 1rem);
+    --_left: max(var(--_gutter), env(safe-area-inset-left, 0px));
+    --_right: max(var(--_gutter), env(safe-area-inset-right, 0px));
     position: relative; display: inline-block; vertical-align: middle;
 }
 .ga-cookie-button {
@@ -39,7 +43,9 @@
 
 .ga-cookie-panel {
     position: absolute; bottom: calc(100% + .5rem); left: 0; z-index: 50;
-    width: min(18rem, calc(100vw - 2rem)); padding: .9rem 1rem; box-sizing: border-box;
+    width: min(18rem, calc(100vw - var(--_left) - var(--_right))); padding: .9rem 1rem; box-sizing: border-box;
+    /* Wherever it opens, consent.js keeps it this far from the screen's left and right edges (it reads them here). */
+    scroll-margin-left: var(--_left); scroll-margin-right: var(--_right);
     border: 1px solid var(--_line); border-radius: var(--_radius); background: var(--_bg); color: var(--_ink);
     box-shadow: var(--_shadow); font-family: var(--consent-font, inherit); font-size: .85rem; line-height: 1.5; font-weight: 400; font-style: normal; letter-spacing: normal; text-transform: none; text-align: left;
 }
@@ -81,7 +87,7 @@
 /* "Personnaliser": the detailed section takes the question's place - one row per feature, its switch, what it keeps. */
 .ga-cookie-summary[hidden], .ga-cookie-section[hidden] { display: none; }
 .ga-cookie-section:focus { outline: none; }
-.ga-cookie.is-choosing .ga-cookie-panel.is-customizing { width: min(24rem, calc(100vw - 2rem)); }
+.ga-cookie.is-choosing .ga-cookie-panel.is-customizing { width: min(24rem, calc(100vw - var(--_left) - var(--_right))); }
 .ga-cookie-panel .ga-cookie-title { margin: 0 0 .6rem; font-weight: 700; }
 .ga-cookie-categories { list-style: none; margin: 0 0 .8rem; padding: 0 .3rem 0 0; display: grid; gap: .7rem; max-height: min(21rem, 50vh); overflow: auto; overscroll-behavior: contain; }
 .ga-cookie-category-head { display: grid; grid-template-columns: auto 1fr; gap: .1rem .6rem; align-items: start; cursor: pointer; }
@@ -115,12 +121,15 @@
 .ga-cookie-section .ga-cookie-more { margin-top: .6rem; }
 
 /* Not answered yet: the panel floats at the bottom of the screen, whatever is scrolled. */
-.ga-cookie.is-floating .ga-cookie-panel { position: fixed; left: 1rem; right: auto; top: auto; bottom: 1rem; z-index: 1500; width: min(22rem, calc(100vw - 2rem)); }
+.ga-cookie.is-floating .ga-cookie-panel {
+    position: fixed; left: var(--_left); right: auto; top: auto; bottom: max(1rem, env(safe-area-inset-bottom, 0px)); z-index: 1500;
+    width: min(22rem, calc(100vw - var(--_left) - var(--_right)));
+}
 /* consent.position, when it is not the bottom left corner. */
-.ga-cookie.is-floating .ga-cookie-panel[data-consent-position$="-right"] { left: auto; right: 1rem; }
+.ga-cookie.is-floating .ga-cookie-panel[data-consent-position$="-right"] { left: auto; right: var(--_right); }
 .ga-cookie.is-floating .ga-cookie-panel[data-consent-position$="-center"] { left: 50%; right: auto; translate: -50% 0; }
-.ga-cookie.is-floating .ga-cookie-panel[data-consent-position^="top-"] { top: 1rem; bottom: auto; }
-.ga-cookie.is-floating.is-choosing .ga-cookie-panel.is-customizing { width: min(24rem, calc(100vw - 2rem)); }
+.ga-cookie.is-floating .ga-cookie-panel[data-consent-position^="top-"] { top: max(1rem, env(safe-area-inset-top, 0px)); bottom: auto; }
+.ga-cookie.is-floating.is-choosing .ga-cookie-panel.is-customizing { width: min(24rem, calc(100vw - var(--_left) - var(--_right))); }
 @media (prefers-reduced-motion: no-preference) {
     .ga-cookie.is-floating .ga-cookie-panel:not([hidden]) { animation: ga-cookie-in .4s cubic-bezier(.2, .9, .3, 1.2) both; }
 }

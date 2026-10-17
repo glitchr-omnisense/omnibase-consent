@@ -184,13 +184,79 @@
             b.title = b.getAttribute(refused ? 'data-refused-label' : 'data-accepted-label') || '';
             if (mine && root.id) b.setAttribute('aria-controls', root.id);
         });
+        contain();
     }
 
-    /** Opened under its circle (not floating), the panel is brought on screen: a "Cookies" link may be far from it. */
+    /** A length the browser computed ("16px"), in pixels; `otherwise` when it says none. */
+    function px(value, otherwise) {
+        var n = parseFloat(value);
+        return isNaN(n) ? otherwise : n;
+    }
+
+    /**
+     * The panel inside the screen, across: whichever circle it sits under (one
+     * in the middle of a footer pushed it past the right edge of a phone) and
+     * wherever the site places it. It keeps from the left and right edges what
+     * its scroll-margin says (consent.css: 1rem, or a phone's safe area), and is
+     * moved by its two margins - one or the other moves it, whether the site
+     * anchors it on the left, on the right or in the middle. Too wide for the
+     * screen, its start stays in sight. Closed, it is where the site put it.
+     */
+    var watched = null;     // the panel a ResizeObserver follows: wider in the detailed section, its words loaded...
+    var resizing = typeof window.ResizeObserver === 'function' ? new window.ResizeObserver(function () { contain(); }) : null;
+    function contain() {
+        var root = banner();
+        if (resizing && root !== watched) {
+            if (watched) resizing.unobserve(watched);
+            watched = root;
+            if (root) resizing.observe(root);
+        }
+        if (!root) return;
+        root.style.removeProperty('margin-left');
+        root.style.removeProperty('margin-right');
+        if (root.hidden) return;
+        var rect = root.getBoundingClientRect();
+        var screen = document.documentElement.clientWidth || window.innerWidth;
+        if (!rect.width || !screen) return;
+        var style = window.getComputedStyle(root);
+        var left = px(style.scrollMarginLeft, 16), right = px(style.scrollMarginRight, 16);
+        var shift = 0;
+        if (rect.right > screen - right) shift = screen - right - rect.right;
+        if (rect.left + shift < left) shift = left - rect.left;
+        if (Math.abs(shift) < .5) return;
+        root.style.marginLeft = (px(style.marginLeft, 0) + shift) + 'px';
+        root.style.marginRight = (px(style.marginRight, 0) - shift) + 'px';
+    }
+
+    /**
+     * Opened under its circle (not floating), the panel is brought on screen: a
+     * "Cookies" link may be far from it. Up or down only, as little as it takes
+     * (each box that scrolls it, then the page): a page wider than the screen is
+     * not scrolled sideways for it, as scrollIntoView() did. Fixed, it is on
+     * screen already.
+     */
     function reveal() {
         var root = banner();
-        if (!root || root.hidden || Module.pending() || typeof root.scrollIntoView !== 'function') return;
-        root.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        if (!root || root.hidden || Module.pending()) return;
+        if (window.getComputedStyle(root).position === 'fixed') return;
+        var page = document.scrollingElement || document.documentElement;
+        for (var box = root.parentElement; box; box = box.parentElement) {
+            var whole = box === page || box === document.documentElement || box === document.body;
+            if (!whole && !(/(auto|scroll|overlay)/.test(window.getComputedStyle(box).overflowY) && box.scrollHeight > box.clientHeight)) continue;
+            var r = root.getBoundingClientRect();
+            var top = 0, bottom = window.innerHeight;
+            if (!whole) {
+                var b = box.getBoundingClientRect();
+                top = b.top + box.clientTop;
+                bottom = top + box.clientHeight;
+            }
+            var by = 0;
+            if (r.top < top && r.bottom <= bottom) by = r.top - top;
+            else if (r.bottom > bottom && r.top >= top) by = Math.min(r.bottom - bottom, r.top - top);
+            if (by && whole) return void window.scrollTo(window.scrollX || window.pageXOffset || 0, (window.scrollY || window.pageYOffset || 0) + by);
+            if (by) box.scrollTop += by;
+            if (whole) return;
+        }
     }
 
     /** A duration the library prints as configured ("30d") gets the words the page has for it. */
@@ -462,6 +528,7 @@
         window.addEventListener('cookie:consent', onAnswer);
         window.addEventListener('cookie:open', function () { word(); paint(); reveal(); });
         window.addEventListener('cookie:close', paint);
+        window.addEventListener('resize', contain);
         document.addEventListener('click', onBefore, true);
         document.addEventListener('click', onClick);
         document.addEventListener('keydown', onKey);

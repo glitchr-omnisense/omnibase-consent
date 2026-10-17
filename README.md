@@ -159,8 +159,16 @@ above the circle. The states are classes of the circle (`.ga-cookie`):
     --consent-radius: 14px;   --consent-font: inherit;
     --consent-shadow: 0 12px 30px rgba(0, 0, 0, .16);
     --consent-size: 2rem;
+    --consent-gutter: 1rem;   /* the room the panel keeps from the screen's edges (a phone's safe area if wider) */
 }
 ```
+
+Whatever circle or link opens it and wherever a site's stylesheet places it,
+the panel stays inside the screen across: `consent.js` moves it by its margins
+until it is `--consent-gutter` from the left and right edges (too wide for
+the screen, its start stays in sight), and puts it back where the site put it
+when it closes. Opened under a circle far from where the visitor is, it is
+scrolled into sight up or down only, never sideways.
 
 ## In a script
 

@@ -373,6 +373,101 @@ test('another page\'s configuration (the navigation): its words, the same answer
     assert.equal($('#ga-cookie-footer').hidden, false);
 });
 
+// jsdom lays nothing out: the panel's box is given here - where its circle starts, plus its margins (the
+// circle's own `left`), 288px wide, 340 in the detailed section -, the screen `screen.width` wide.
+function laidOut(window, at, screen) {
+    Object.defineProperty(window.document.documentElement, 'clientWidth', { configurable: true, get: () => screen.width });
+    const native = window.HTMLElement.prototype.getBoundingClientRect;
+    window.HTMLElement.prototype.getBoundingClientRect = function () {
+        if (!this.classList.contains('ga-cookie-panel') || this.hidden) return native.call(this);
+        const width = this.classList.contains('is-customizing') ? 340 : 288;
+        const left = at[this.closest('.ga-cookie').id] + (parseFloat(this.style.marginLeft) || 0);
+        return { left, right: left + width, width, top: 500, bottom: 700, height: 200, x: left, y: 500 };
+    };
+}
+const box = (element) => element.getBoundingClientRect();
+
+test('the panel stays inside the screen across, whichever circle opens it: 16px from each edge, its start in sight when too wide', async () => {
+    const screen = { width: 390 };
+    const { window, click, $, Cookie, errors } = await page(circle({ place: 'bar' }) + circle({ place: 'footer' }), {
+        local: { 'cookie/USER': 'true' },
+        before: (window) => laidOut(window, { 'circle-bar': 20, 'circle-footer': 200 }, screen)
+    });
+
+    click('#circle-footer [data-consent-toggle]');
+    const panel = Cookie.banner();
+    assert.equal(panel.parentNode, $('#circle-footer'));
+    assert.equal(panel.classList.contains('is-customizing'), true, 'the detailed section, 340 wide: 200 + 340 is past 390');
+    assert.equal(box(panel).right, 374, 'moved left, 16px from the right edge');
+    assert.equal(panel.style.marginLeft, '-166px');
+    assert.equal(panel.style.marginRight, '166px', 'by both margins: a panel the site anchors on the right moves the same way');
+
+    click('#circle-footer [data-consent-toggle]');
+    assert.equal(panel.hidden, true);
+    assert.equal(panel.style.marginLeft + panel.style.marginRight, '', 'closed, where the site put it');
+
+    click('#circle-bar [data-consent-toggle]');
+    assert.equal(Cookie.banner().parentNode, $('#circle-bar'));
+    assert.equal(box(panel).left, 20);
+    assert.equal(panel.style.marginLeft, '', 'inside already: untouched');
+
+    screen.width = 320;
+    window.dispatchEvent(new window.Event('resize'));
+    assert.equal(box(panel).left, 16, 'a narrower screen: too wide for it, its start stays in sight');
+    assert.equal(panel.style.marginLeft, '-4px');
+    screen.width = 1440;
+    window.dispatchEvent(new window.Event('resize'));
+    assert.equal(panel.style.marginLeft, '', 'and back where it was on a wide one');
+    assert.deepEqual(errors, []);
+});
+
+test('a "Cookies" link far from the circle brings its panel on screen upwards or downwards, never sideways', async () => {
+    const scrolled = [];
+    const { window, click, $, Cookie } = await page('<div id="list" style="overflow-y: auto">' + circle() + '</div><a href="#" data-consent-open id="link">cookies</a>', {
+        local: { 'cookie/USER': 'true' },
+        before: (window) => {
+            let inner = 0;
+            const list = window.document.getElementById('list');
+            Object.defineProperty(list, 'scrollTop', { configurable: true, get: () => inner, set: (v) => { inner = v; } });
+            Object.defineProperty(list, 'scrollHeight', { configurable: true, get: () => 2000 });
+            Object.defineProperty(list, 'clientHeight', { configurable: true, get: () => list.dataset.scrolls ? 300 : 2000 });
+            list.getBoundingClientRect = () => ({ left: 0, right: 390, width: 390, top: 100, bottom: 400, height: 300, x: 0, y: 100 });
+            const native = window.HTMLElement.prototype.getBoundingClientRect;
+            window.HTMLElement.prototype.getBoundingClientRect = function () {
+                if (!this.classList.contains('ga-cookie-panel') || this.hidden) return native.call(this);
+                const top = 900 - inner;
+                return { left: 500, right: 788, width: 288, top, bottom: top + 200, height: 200, x: 500, y: top };
+            };
+            Object.defineProperty(window, 'scrollX', { configurable: true, get: () => 40 });
+            Object.defineProperty(window, 'scrollY', { configurable: true, get: () => 10 });
+            window.scrollTo = (x, y) => scrolled.push([x, y]);
+            window.Element.prototype.scrollIntoView = function () { scrolled.push('scrollIntoView'); };
+        }
+    });
+    assert.equal(window.innerHeight, 768);
+
+    click('#link');
+    assert.equal(Cookie.banner().hidden, false);
+    assert.deepEqual(scrolled, [[40, 342]], 'the page, by what the panel is below the screen (1100 - 768), the sideways scroll kept');
+
+    click('[data-consent-close]');
+    assert.equal(Cookie.banner().hidden, true);
+    $('#list').dataset.scrolls = 'yes';
+    click('#link');
+    assert.equal($('#list').scrollTop, 700, 'a box that scrolls it first: its bottom on the box\'s (1100 - 400)');
+    assert.deepEqual(scrolled, [[40, 342]], 'then in sight: the page stays');
+
+    click('[data-consent-close]');
+    const style = window.document.createElement('style');
+    style.textContent = '.ga-cookie-panel { position: fixed; }';
+    window.document.head.appendChild(style);
+    $('#list').scrollTop = 0;
+    click('#link');
+    assert.equal(Cookie.banner().hidden, false);
+    assert.equal($('#list').scrollTop, 0, 'fixed, on screen already: nothing scrolls');
+    assert.deepEqual(scrolled, [[40, 342]]);
+});
+
 test('not one sentence in the script', async () => {
     const { readFileSync } = await import('node:fs');
     const source = readFileSync(new URL('../../public/js/consent.js', import.meta.url), 'utf8');
