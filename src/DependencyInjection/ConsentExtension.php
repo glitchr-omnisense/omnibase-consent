@@ -2,31 +2,15 @@
 
 namespace Base\Consent\DependencyInjection;
 
-use Base\Bundle\AbstractBaseExtension;
-use Symfony\Component\Config\Definition\Processor;
-use Symfony\Component\Config\FileLocator;
-use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
+// The name sites and tests knew: since step C8 of the plan "omnibase agnostique" the class is
+// Base\Consent\Bridge\Symfony\DependencyInjection\ConsentExtension, with the bundle's other Symfony glue under src/Bridge/Symfony.
+if (!class_exists(ConsentExtension::class, false)) {
+    class_alias(\Base\Consent\Bridge\Symfony\DependencyInjection\ConsentExtension::class, ConsentExtension::class);
+}
 
-class ConsentExtension extends AbstractBaseExtension
-{
-    public function getConfiguration(array $config, ContainerBuilder $container): ConsentConfiguration
+if (false) {
+    /** @deprecated use \Base\Consent\Bridge\Symfony\DependencyInjection\ConsentExtension */
+    class ConsentExtension extends \Base\Consent\Bridge\Symfony\DependencyInjection\ConsentExtension
     {
-        return new ConsentConfiguration();
-    }
-
-    public function load(array $configs, ContainerBuilder $container): void
-    {
-        $loader = new PhpFileLoader($container, new FileLocator(\dirname(__DIR__, 2).'/config'));
-        $loader->load('services.php');
-
-        $configuration = new ConsentConfiguration();
-        $config = (new Processor())->processConfiguration($configuration, $configs);
-
-        // Flat parameters (consent.groups, consent.countdown...), and the whole tree for the Twig extension.
-        $this->setConfiguration($container, $config, $configuration->getTreeBuilder()->buildTree()->getName());
-        $container->setParameter('consent.config', $config);
-        // The bundle's own features, which the site's are laid over (consent.defaults).
-        $container->setParameter('consent.defaults', require \dirname(__DIR__, 2).'/config/features.php');
     }
 }
