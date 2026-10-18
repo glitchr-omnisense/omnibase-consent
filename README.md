@@ -218,11 +218,42 @@ can see while the question floats, under the one clicked afterwards. A circle
 may leave the page with it - a page swap empties the bar it sat in, a script
 rebuilds the footer: the next circle's panel takes over, and nothing throws.
 
+## Without Symfony
+
+The answer itself loads without the framework (plan "omnibase agnostique",
+step C8): `Base\Consent\ConsentPanel` - the features and what each keeps,
+the countdown, the words, `options()`, `settings()`, `json()` - takes the
+site's configuration (as `consent:` reads), a translator
+(symfony/translation's contract), the bundle's features
+(`ConsentPanel::features()`, `config/features.php`) and two closures, a
+route's address (the privacy page) and the session's name.
+`Base\Consent\Bridge\Twig\ConsentExtension` gives the partial its two
+functions in any Twig environment.
+
+```php
+use Base\Consent\Bridge\Twig\ConsentExtension;
+use Base\Consent\ConsentPanel;
+
+$panel = new ConsentPanel($config, $translator, ConsentPanel::features(),
+    fn (string $route, array $parameters) => $router->url($route, $parameters),
+    fn () => session_name());
+$twig->addExtension(new ConsentExtension($panel));
+```
+
+`tests/BareTest.php` loads both (`tests/Fondation.php`) with Composer's
+autoloader alone, and `tests/bare/consent-without-framework.php` prints the
+partial's functions in a plain Twig environment, nothing of the framework
+loaded. Under `src/Bridge/Symfony`: the bundle, its configuration and
+extension, and the Twig extension built from the container. The former
+names still answer: `Base\Consent\ConsentBundle` in `config/bundles.php`,
+`Base\Consent\Twig\ConsentExtension` (its constructor unchanged, the
+service's id an alias), `Base\Consent\DependencyInjection\*`.
+
 ## Tests
 
 ```bash
 npm install && npm test     # node --test, on jsdom: the partial itself, consent.js on @glitchr/flowjs/cookie, consent-legacy.js without it
-vendor/bin/phpunit          # the configuration, what the partial prints, every language's words
+vendor/bin/phpunit          # the configuration, what the partial prints, every language's words, the classes without the framework (BareTest), the kept names
 ```
 
 In omnibase's harness (`omniscient/omnibase`, `docker/`), on this checkout:
