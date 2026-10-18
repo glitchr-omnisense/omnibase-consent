@@ -6,7 +6,8 @@
     "authors": [{"name": "Marco Meyer", "email": "marco.meyer@glitchr.io"}],
     "require": {
         "php": "^8.2",
-        "omniscient/omnibase": "3.0.*-dev",
+        "omnibridge/symfony": "1.x-dev",
+        "omniscient/omnibase": "3.0.*-dev || 4.0.*-dev",
         "symfony/config": "^6.0|^7.0|^8.0",
         "symfony/dependency-injection": "^6.0|^7.0|^8.0",
         "symfony/http-kernel": "^6.0|^7.0|^8.0",
