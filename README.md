@@ -249,6 +249,12 @@ names still answer: `Base\Consent\ConsentBundle` in `config/bundles.php`,
 `Base\Consent\Twig\ConsentExtension` (its constructor unchanged, the
 service's id an alias), `Base\Consent\DependencyInjection\*`.
 
+The package requires no part of the framework: `omnibridge/symfony`, which
+carries it, is suggested (audit "lesringostars face au master plan", R3). A
+Symfony site has it already - omnibase's `BaseBundle` refuses to start
+without it -; a Laravel application (lesringostars' twin) installs the
+package without Symfony.
+
 ## Tests
 
 ```bash
