@@ -6,9 +6,11 @@
     "authors": [{"name": "Marco Meyer", "email": "marco.meyer@glitchr.io"}],
     "require": {
         "php": "^8.2",
-        "omnibridge/symfony": "1.x-dev",
         "omniscient/omnibase": "3.0.*-dev || 4.0.*-dev",
         "twig/twig": "^3.0"
+    },
+    "suggest": {
+        "omnibridge/symfony": "The bundle under Symfony (src/Bridge/Symfony: ConsentBundle, its configuration, the Twig extension built from the container). A Symfony site has it already: omnibase's BaseBundle refuses to start without it. A host without Symfony (Laravel, plain PHP) does not want it: ConsentPanel and Bridge\\Twig\\ConsentExtension need Twig and a translator only (1.x-dev)"
     },
     "autoload": {
         "psr-4": {"Base\\Consent\\": "./src"}
