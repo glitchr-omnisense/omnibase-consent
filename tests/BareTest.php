@@ -50,7 +50,7 @@ final class BareTest extends TestCase
         }
         self::assertSame([], $failures, "a class of the Fondation loads the framework:\n".implode("\n", $failures));
         self::assertSame(0, $status);
-        self::assertCount(2, $fondation);
+        self::assertCount(3, $fondation);
     }
 
     /** Sorted, each class once, and the whole root namespace: every class of src/ is the Fondation's, the bridge's or a kept name. */

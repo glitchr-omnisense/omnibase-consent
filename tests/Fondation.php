@@ -16,9 +16,11 @@
  * for the sites (BareTest::KEPT) are the bridge's.
  *
  * The list only grows; a class leaves it only by a decision written down in
- * the plan. Sorted. 2 classes on 2026-10-18.
+ * the plan. Sorted. 2 classes on 2026-10-18; 3 on 2026-10-24 (ConsentConfig, the
+ * configuration made whole without the tree: audit R24).
  */
 return [
     'Base\Consent\Bridge\Twig\ConsentExtension',
+    'Base\Consent\ConsentConfig',
     'Base\Consent\ConsentPanel',
 ];
