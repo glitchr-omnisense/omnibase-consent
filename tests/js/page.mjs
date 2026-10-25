@@ -57,6 +57,7 @@ export function circle({ place = 'footer', floating = true, countdown = 0, featu
         if (expression === '_id') return 'ga-cookie-' + place;
         if (expression === 'consent_settings()') return JSON.stringify(config).replace(/</g, '\\u003C');
         if (expression === '_options.countdown') return String(countdown);
+        if (expression === '_options.action') return attribute((config.countdown && config.countdown.action) || 'default');
         if (expression === '_options.groups|json_encode') return attribute(JSON.stringify(features.map((f) => f.name)));
         if (expression === '_options.features|json_encode') return attribute(JSON.stringify(features));
         if (expression === '_options.labels|json_encode') return attribute('{}');

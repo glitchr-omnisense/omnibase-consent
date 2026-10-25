@@ -122,3 +122,16 @@ test('a click elsewhere answers only if consent.dismiss says so, never one on th
     assert.equal(answers.Consent.state('USER'), true);
     assert.equal(answers.Consent.state('CHAT'), false);
 });
+
+test('without the library, countdown_action: refuse - no answer refuses every feature but the required ones', async () => {
+    const config = settings({ countdown: { duration: 1, action: 'refuse' } });
+    const { document, Consent } = await page(partial({ countdown: 1, config, features: [{ name: 'NECESSARY', required: true }, { name: 'USER', implicit: true }, { name: 'CHAT' }] }), {
+        before: (window) => { window.HTMLElement.prototype.checkVisibility = () => true; }
+    });
+    assert.equal(document.querySelector('#circle-footer').getAttribute('data-consent-action'), 'refuse');
+    await new Promise((resolve) => setTimeout(resolve, 1900));
+    assert.equal(Consent.state('NECESSARY'), true);
+    assert.equal(Consent.state('USER'), false, 'the implicit feature refused, as the panel said');
+    assert.equal(Consent.state('CHAT'), false);
+    assert.equal(document.querySelector('#ga-cookie-footer').hidden, true);
+});
