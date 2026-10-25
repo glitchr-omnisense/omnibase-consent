@@ -480,3 +480,17 @@ test('not one sentence in the script', async () => {
     });
     assert.deepEqual(sentences, []);
 });
+
+test('countdown_action: refuse - when the time is up every feature is off but the required ones, the panel closes, the answer is kept', async () => {
+    const counted = await page(circle({ countdown: 1, config: settings({ countdown: { duration: '300ms', action: 'refuse' } }) }) + '<script type="text/plain" data-consent-script="ANALYTICS"></script>');
+    assert.equal(counted.$('#circle-footer').getAttribute('data-consent-action'), 'refuse');
+    assert.equal(counted.Consent.undecided(), true);
+    await counted.after(700);
+    assert.equal(counted.Consent.undecided(), false, 'the countdown answered');
+    assert.equal(counted.Consent.state('NECESSARY'), true);
+    assert.equal(counted.Consent.state('USER'), false, 'an implicit feature refused too');
+    assert.equal(counted.Consent.state('LOCATION'), false);
+    assert.equal(counted.Consent.state('ANALYTICS'), false);
+    assert.equal(counted.$('#ga-cookie-footer').hidden, true);
+    assert.equal(counted.window.localStorage.getItem('cookie/USER'), 'false', 'kept where @glitchr/cookie kept it');
+});

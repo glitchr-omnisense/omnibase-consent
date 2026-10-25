@@ -19,7 +19,9 @@ controller in every site.
   screen with a countdown (`consent.countdown`, 10 s): when the time is up,
   each feature takes its default, the site's own on and the rest off.
   `countdown: 0` waits for an answer; `countdown_action` makes no answer a yes
-  to everything, or a no. A click elsewhere answers nothing (`dismiss: none`):
+  to everything, or a no (`refuse`: every feature off but the required ones,
+  the panel saying "c'est refusé dans 10 s"; a page without the library, on
+  consent-legacy.js, obeys it too). A click elsewhere answers nothing (`dismiss: none`):
   the question stays until the visitor answers or the countdown, which they
   can read, runs out. A click on Symfony's web debug toolbar, a `dump()`, or
   anything marked `data-consent-ignore` (`consent.ignore` adds selectors) is

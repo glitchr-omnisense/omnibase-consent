@@ -33,7 +33,7 @@
 {% set _options = consent_options() %}
 {% set _id = 'ga-cookie-' ~ (place ?? 'footer') %}
 <link rel="stylesheet" href="{{ asset('bundles/consent/css/consent.css') }}">
-<div class="ga-cookie" data-consent data-consent-groups="{{ _options.groups|json_encode }}" data-consent-features="{{ _options.features|json_encode }}" data-consent-labels="{{ _options.labels|json_encode }}" data-consent-countdown="{{ _options.countdown }}" data-consent-erase="{{ _options.erase|json_encode }}" data-consent-dismiss="{{ _options.dismiss }}" data-consent-ignore="{{ _options.ignore|json_encode }}"{% if (floating ?? true) is same as(false) %} data-consent-floating="false"{% endif %}>
+<div class="ga-cookie" data-consent data-consent-groups="{{ _options.groups|json_encode }}" data-consent-features="{{ _options.features|json_encode }}" data-consent-labels="{{ _options.labels|json_encode }}" data-consent-countdown="{{ _options.countdown }}" data-consent-action="{{ _options.action }}" data-consent-erase="{{ _options.erase|json_encode }}" data-consent-dismiss="{{ _options.dismiss }}" data-consent-ignore="{{ _options.ignore|json_encode }}"{% if (floating ?? true) is same as(false) %} data-consent-floating="false"{% endif %}>
     <button type="button" class="ga-cookie-button" data-consent-toggle aria-expanded="false" aria-controls="{{ _id }}" aria-label="{{ '@consent.label'|trans }}"
             data-accepted-label="{{ '@consent.accepted'|trans }}" data-refused-label="{{ '@consent.refused'|trans }}" title="{{ '@consent.accepted'|trans }}">
         {%- if icon is defined -%}{{ icon|raw }}{%- else -%}

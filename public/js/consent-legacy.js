@@ -13,7 +13,7 @@
  * through window.Cookie when the page has it - so turning a feature off also
  * deletes its cookies.
  *
- * It reads the circle's data-consent-features, -labels, -countdown, -erase,
+ * It reads the circle's data-consent-features, -labels, -countdown, -action, -erase,
  * -dismiss and -ignore,
  * the list .ga-cookie-features and the buttons [data-consent-details] and
  * [data-consent-save] of the partial.
@@ -208,7 +208,7 @@
             // No answer counts only for a question the visitor could read: hidden
             // (its bar folded, another tab), the count waits where it is.
             if (document.hidden || !visible(panel(widget))) return countdown(widget, left);
-            if (left > 0) countdown(widget, left - 1); else decide(implicitChoice());
+            if (left > 0) countdown(widget, left - 1); else decide(countdownChoice(widget.dataset.consentAction));
         }, left > 0 ? 1000 : 600);
     }
 
@@ -228,6 +228,12 @@
         return map;
     }
     function implicitChoice() { return choice(function (f) { return f.implicit; }); }
+    /** What no answer means when the time is up (consent.countdown_action): refuse, accept, else each feature its default. */
+    function countdownChoice(action) {
+        if (action === 'refuse') return choice(function () { return false; });
+        if (action === 'accept') return choice(function () { return true; });
+        return implicitChoice();
+    }
 
     function eraseCookies(prefixes) {
         if (!prefixes.length) return;
