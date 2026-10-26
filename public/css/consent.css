@@ -129,6 +129,11 @@
 .ga-cookie.is-floating .ga-cookie-panel[data-consent-position$="-right"] { left: auto; right: var(--_right); }
 .ga-cookie.is-floating .ga-cookie-panel[data-consent-position$="-center"] { left: 50%; right: auto; translate: -50% 0; }
 .ga-cookie.is-floating .ga-cookie-panel[data-consent-position^="top-"] { top: max(1rem, env(safe-area-inset-top, 0px)); bottom: auto; }
+/* In development, Symfony's web debug toolbar holds the bottom of the screen (36px, above everything): a panel
+   floating at the bottom rises above it rather than covering it, and goes back down when the toolbar is hidden. */
+html:has(.sf-toolbar .sf-toolbarreset:not([style*="none"])) .ga-cookie.is-floating .ga-cookie-panel:not([data-consent-position^="top-"]) {
+    bottom: calc(36px + max(1rem, env(safe-area-inset-bottom, 0px)));
+}
 .ga-cookie.is-floating.is-choosing .ga-cookie-panel.is-customizing { width: min(24rem, calc(100vw - var(--_left) - var(--_right))); }
 @media (prefers-reduced-motion: no-preference) {
     .ga-cookie.is-floating .ga-cookie-panel:not([hidden]) { animation: ga-cookie-in .4s cubic-bezier(.2, .9, .3, 1.2) both; }
