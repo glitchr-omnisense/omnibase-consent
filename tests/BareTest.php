@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * omnibase/consent outside the framework (plan "omnibase agnostique", step C8):
- * omniscient/omnibase's docker/bin/bare, run in a PHP process of its own - this
+ * omnisense/omnibase's docker/bin/bare, run in a PHP process of its own - this
  * one has loaded PHPUnit and the suite - requires Composer's autoloader alone,
  * loads every class of tests/Fondation.php and reports every class, interface,
  * trait and file PHP loaded on the way. None may be the framework's (what that
@@ -128,7 +128,7 @@ final class BareTest extends TestCase
     }
 
     /**
-     * Runs omniscient/omnibase's docker/bin/bare apart, on the autoloader of this run, this checkout's
+     * Runs omnisense/omnibase's docker/bin/bare apart, on the autoloader of this run, this checkout's
      * classes first (tests/bare/autoload.php).
      *
      * @param list<string> $classes
@@ -147,8 +147,8 @@ final class BareTest extends TestCase
                 break;
             }
         }
-        self::assertNotNull($autoload, 'omniscient/omnibase is installed');
-        self::assertFileExists((string) $bare, 'omniscient/omnibase\'s docker/bin/bare');
+        self::assertNotNull($autoload, 'omnisense/omnibase is installed');
+        self::assertFileExists((string) $bare, 'omnisense/omnibase\'s docker/bin/bare');
 
         $script = __DIR__.'/bare/autoload.php';
         $output = (string) tempnam(sys_get_temp_dir(), 'bare');

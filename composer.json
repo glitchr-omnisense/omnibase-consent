@@ -6,7 +6,7 @@
     "authors": [{"name": "Marco Meyer", "email": "marco.meyer@glitchr.io"}],
     "require": {
         "php": "^8.2",
-        "omniscient/omnibase": "3.0.*-dev || 4.0.*-dev",
+        "omnisense/omnibase": "3.0.*-dev || 4.0.*-dev",
         "twig/twig": "^3.0"
     },
     "suggest": {

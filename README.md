@@ -1,6 +1,6 @@
 # Consent
 
-The cookie answer of the [omnibase](https://github.com/glitchr-studio/omnibase)
+The cookie answer of the [omnibase](https://github.com/glitchr-omnisense/omnibase)
 sites, written once: a small circle that opens a panel - what the site keeps,
 **accept**, **refuse**, **customize** - instead of a copy of the same
 controller in every site.
@@ -264,7 +264,7 @@ npm install && npm test     # node --test, on jsdom: the partial itself, consent
 vendor/bin/phpunit          # the configuration, what the partial prints, every language's words, the classes without the framework (BareTest), the kept names
 ```
 
-In omnibase's harness (`omniscient/omnibase`, `docker/`), on this checkout:
+In omnibase's harness (`omnisense/omnibase`, `docker/`), on this checkout:
 
 ```bash
 docker compose -f compose.yml run --rm -v /path/to/consent:/srv/demo/vendor/omnibase/consent omnibase test consent
