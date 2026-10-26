@@ -4,7 +4,7 @@
  * omnibase/consent without the framework: the classes of the bundle that load
  * with Composer's autoloader alone - no kernel, no container, no bundle booted
  * (plan "omnibase agnostique", step C8). tests/BareTest.php loads each of them
- * through omniscient/omnibase's docker/bin/bare, in a PHP process apart from
+ * through omnisense/omnibase's docker/bin/bare, in a PHP process apart from
  * PHPUnit's, and fails if a class or a file of the framework is loaded on the
  * way (the Symfony bundles and bridges, dependency-injection, config,
  * http-kernel, http-foundation, routing, security-*, form, console; not the

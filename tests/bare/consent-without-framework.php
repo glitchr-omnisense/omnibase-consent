@@ -1,7 +1,7 @@
 <?php
 
 /*
- * omnibase/consent where there is no framework: run by omniscient/omnibase's
+ * omnibase/consent where there is no framework: run by omnisense/omnibase's
  * docker/bin/bare with Composer's autoloader alone (tests/BareTest.php), it
  * builds the panel as another framework would - the site's configuration as
  * ConsentConfiguration gives it by default, symfony/translation's own
