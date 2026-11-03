@@ -2,7 +2,6 @@
 
 namespace Base\Consent\Tests;
 
-use Base\BaseBundle;
 use Base\Consent\ConsentBundle;
 use PHPUnit\Framework\TestCase;
 
@@ -89,7 +88,8 @@ final class BareTest extends TestCase
         self::assertSame(1, $status);
         $bundle = $report['classes'][ConsentBundle::class];
         self::assertNull($bundle['error']);
-        self::assertSame('Base\\Bundle\\AbstractBaseBundle', $bundle['framework']['Symfony\\Component\\HttpKernel\\Bundle\\Bundle'] ?? null);
+        // omnibase 4.x's AbstractBaseBundle, or omnibridge/symfony's under omnibase 5.0 (its former name an alias).
+        self::assertContains($bundle['framework']['Symfony\\Component\\HttpKernel\\Bundle\\Bundle'] ?? null, ['Base\\Bundle\\AbstractBaseBundle', 'Omnibridge\\Symfony\\Omnibase\\Bundle\\AbstractBaseBundle']);
         self::assertNotEmpty(preg_grep('~/symfony/http-kernel/~', $bundle['framework_files']));
     }
 
@@ -141,7 +141,7 @@ final class BareTest extends TestCase
         // application's suite) the first ClassLoader is PHPUnit's own.
         $autoload = $bare = null;
         foreach (\Composer\Autoload\ClassLoader::getRegisteredLoaders() as $vendorDir => $loader) {
-            if (false !== $file = $loader->findFile(BaseBundle::class)) {
+            if (false !== $file = $loader->findFile(\Base\Services::class)) {
                 $autoload = $vendorDir.'/autoload.php';
                 $bare = \dirname((string) realpath($file), 2).'/docker/bin/bare';
                 break;
