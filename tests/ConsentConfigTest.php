@@ -60,6 +60,7 @@ final class ConsentConfigTest extends TestCase
      *
      * @param array<string, mixed> $site
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('configurations')]
     public function testTheSameAsTheTreeGives(array $site): void
     {
         self::assertSame(ConsentConfigurationTest::process($site), ConsentConfig::normalize($site));

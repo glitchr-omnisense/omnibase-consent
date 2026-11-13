@@ -6,11 +6,15 @@
     "authors": [{"name": "Marco Meyer", "email": "marco.meyer@glitchr.io"}],
     "require": {
         "php": "^8.2",
-        "omnisense/omnibase": "3.0.*-dev || 4.0.*-dev || 5.0.*-dev",
+        "omnisense/omnibase": "^5.1",
         "twig/twig": "^3.0"
     },
+    "require-dev": {
+        "omnibridge/symfony": "^1.1",
+        "phpunit/phpunit": "^11.5|^12.0"
+    },
     "suggest": {
-        "omnibridge/symfony": "The bundle under Symfony (src/Bridge/Symfony: ConsentBundle, its configuration, the Twig extension built from the container). A Symfony site has it already: omnibase's BaseBundle refuses to start without it. A host without Symfony (Laravel, plain PHP) does not want it: ConsentPanel and Bridge\\Twig\\ConsentExtension need Twig and a translator only (1.x-dev)"
+        "omnibridge/symfony": "The bundle under Symfony (src/Bridge/Symfony: ConsentBundle, its configuration, the Twig extension built from the container). A Symfony site has it already: omnibase's BaseBundle refuses to start without it. A host without Symfony (Laravel, plain PHP) does not want it: ConsentPanel and Bridge\\Twig\\ConsentExtension need Twig and a translator only (^1.1)"
     },
     "autoload": {
         "psr-4": {"Base\\Consent\\": "./src"}
@@ -18,6 +22,9 @@
     "autoload-dev": {
         "psr-4": {"Base\\Consent\\Tests\\": "./tests"}
     },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    "extra": {
+        "branch-alias": {
+            "dev-main": "1.x-dev"
+        }
+    }
 }

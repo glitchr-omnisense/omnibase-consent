@@ -45,13 +45,20 @@ controller in every site.
 ## Install
 
 ```bash
-composer require omnibase/consent:dev-main
+composer require omnibase/consent
 ```
+
+Under Symfony it runs on the core's Symfony host (`composer require omnibridge/symfony` if the
+site has not got it yet); `config/bundles.php` registers the core's bundle before this one:
 
 ```php
 // config/bundles.php
+Omnibridge\Symfony\Omnibase\BaseBundle::class => ['all' => true],
 Base\Consent\ConsentBundle::class => ['all' => true],
 ```
+
+Without Symfony (Laravel, plain PHP), `Base\Consent\ConsentPanel` prints the panel with Twig and
+a translator alone: [docs/installation.md](docs/installation.md).
 
 ```twig
 {# where the circle goes: a footer, a tool bar #}
