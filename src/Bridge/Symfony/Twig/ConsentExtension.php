@@ -26,7 +26,7 @@ class ConsentExtension extends TwigConsentExtension
         #[Autowire('%consent.config%')] array $config,
         // omnibase's router: the URL in the visitor's language (/datenschutz, not /confidentialite). Any URL
         // generator will do: a framework without omnibase (Laravel, plan 0 rule 13) hands its own.
-        #[Autowire(service: 'Base\Routing\AdvancedRouterInterface')] UrlGeneratorInterface $urls,
+        #[Autowire(service: 'advanced_router')] UrlGeneratorInterface $urls,
         TranslatorInterface $translator,
         #[Autowire('%consent.defaults%')] array $defaults = [],
         ?RequestStack $requests = null,

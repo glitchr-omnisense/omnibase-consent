@@ -2,7 +2,7 @@
 
 namespace Base\Consent\Bridge\Symfony;
 
-use Base\Bundle\AbstractBaseBundle;
+use Omnibridge\Symfony\Omnibase\Bundle\AbstractBaseBundle;
 use Base\Traits\SingletonTrait;
 
 /**

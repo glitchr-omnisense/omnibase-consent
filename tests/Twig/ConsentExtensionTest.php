@@ -4,7 +4,7 @@ namespace Base\Consent\Tests\Twig;
 
 use Base\Consent\Tests\DependencyInjection\ConsentConfigurationTest;
 use Base\Consent\Twig\ConsentExtension;
-use Base\Routing\AdvancedRouterInterface;
+use Omnibridge\Symfony\Omnibase\Routing\AdvancedRouterInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Routing\Generator\UrlGenerator;
 use Symfony\Component\Routing\RequestContext;

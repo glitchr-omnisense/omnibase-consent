@@ -2,7 +2,7 @@
 
 namespace Base\Consent\Bridge\Symfony\DependencyInjection;
 
-use Base\Bundle\AbstractBaseExtension;
+use Omnibridge\Symfony\Omnibase\Bundle\AbstractBaseExtension;
 use Base\Consent\ConsentPanel;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Config\FileLocator;

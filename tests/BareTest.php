@@ -88,8 +88,8 @@ final class BareTest extends TestCase
         self::assertSame(1, $status);
         $bundle = $report['classes'][ConsentBundle::class];
         self::assertNull($bundle['error']);
-        // omnibase 4.x's AbstractBaseBundle, or omnibridge/symfony's under omnibase 5.0 (its former name an alias).
-        self::assertContains($bundle['framework']['Symfony\\Component\\HttpKernel\\Bundle\\Bundle'] ?? null, ['Base\\Bundle\\AbstractBaseBundle', 'Omnibridge\\Symfony\\Omnibase\\Bundle\\AbstractBaseBundle']);
+        // omnibridge/symfony's AbstractBaseBundle, the bundle's parent.
+        self::assertSame('Omnibridge\\Symfony\\Omnibase\\Bundle\\AbstractBaseBundle', $bundle['framework']['Symfony\\Component\\HttpKernel\\Bundle\\Bundle'] ?? null);
         self::assertNotEmpty(preg_grep('~/symfony/http-kernel/~', $bundle['framework_files']));
     }
 
