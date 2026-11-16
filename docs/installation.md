@@ -7,7 +7,7 @@ order: 10
 
 ## Requirements
 
-`composer.json` requires PHP 8.2 or later, `omnisense/omnibase` 5.1 or later 5.x and
+`composer.json` requires PHP 8.2 or later, `omnisense/omnibase` 7.0 or later 7.x and
 `twig/twig` 3. Under Symfony the bundle needs `omnibridge/symfony` (suggested; an
 omnibase site has it, `BaseBundle` refuses to start without it). In the browser,
 the page needs `@glitchr/flowjs` 1.2.0 or later for its `Cookie` global: omnibase's
