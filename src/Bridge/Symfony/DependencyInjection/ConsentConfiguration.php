@@ -2,7 +2,7 @@
 
 namespace Base\Consent\Bridge\Symfony\DependencyInjection;
 
-use Omnibridge\Symfony\Omnibase\Bundle\AbstractBaseConfiguration;
+use Base\Bundle\AbstractBaseConfiguration;
 use Base\Consent\ConsentConfig as D;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 

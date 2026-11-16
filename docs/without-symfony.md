@@ -112,7 +112,7 @@ and the panel's first category, `settings()['categories'][0]`:
 
 ## Laravel
 
-omnibridge/laravel's `Omnibridge\Laravel\View\OmnibaseExtensions` adds the extension
+omnibridge/laravel's `Base\View\OmnibaseExtensions` adds the extension
 to the views' Twig environment when `omnibridge.consent.config` is set (an array,
 or the path of the Symfony site's `config/packages/consent.yaml`, whose `consent`
 key it reads) and the package is installed: `ConsentConfig::normalize()` on it,

@@ -53,7 +53,7 @@ site has not got it yet); `config/bundles.php` registers the core's bundle befor
 
 ```php
 // config/bundles.php
-Omnibridge\Symfony\Omnibase\BaseBundle::class => ['all' => true],
+Base\BaseBundle::class => ['all' => true],
 Base\Consent\ConsentBundle::class => ['all' => true],
 ```
 

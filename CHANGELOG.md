@@ -1,35 +1,5 @@
 # Changelog
 
-## [Unreleased]
+## Unreleased (1.0.0)
 
-## [1.0.2] - 2026-11-14
-
-### Changed
-
-- Accepts omnisense/omnibase 6.0: `omnisense/omnibase` ^5.1 || ^6.0, `omnibridge/symfony` ^1.1 || ^2.0 (require-dev, and in the suggestion). The
-  same code runs on both lines: it names no former name and no entry point 6.0 removed.
-
-## [1.0.1] - 2026-11-14
-
-### Changed
-
-- The classes omnisense/omnibase 5.0 moved to omnibridge/symfony named by their new names:
-  `Omnibridge\Symfony\Omnibase\Bundle\{AbstractBaseBundle, AbstractBaseExtension, AbstractBaseConfiguration}`
-  in place of `Base\Bundle\*`, former names the core keeps only as aliases until 6.0. No behaviour change.
-- ConsentExtension (Twig) is handed the `advanced_router` service, which `Base\Routing\AdvancedRouterInterface`
-  was an alias of: the same router. ConsentExtensionTest stubs
-  `Omnibridge\Symfony\Omnibase\Routing\AdvancedRouterInterface`; BareTest expects omnibridge/symfony's
-  AbstractBaseBundle as the bundle's parent.
-
-## [1.0.0] - 2026-11-13
-
-First stable release.
-
-### Changed
-
-- Installs with the default minimum-stability: stable requirements (`omnisense/omnibase` ^5.1), a branch alias,
-  no `minimum-stability: dev` left to the sites.
-- CI: glitchr-studio/ci's package workflow (the bundle installed alone, composer validate, PHPUnit,
-  PHPStan against its baseline, a consumer install without require-dev) and its release workflow.
-- require-dev: PHPUnit and omnibridge/symfony (the Symfony bridge's tests and PHPStan);
-  a data provider declared as an attribute for PHPUnit 12.
+omnibase/consent: the cookie consent panel shared by the omnibase sites - features, choices remembered, Consent.use() - on omnisense/omnibase 1.0.
