@@ -86,7 +86,7 @@ class ConsentExtensionTest extends TestCase
         self::assertSame('Personnaliser', $settings['texts']['customize']);
         self::assertSame('Tout accepter', $settings['texts']['acceptAll']);
         self::assertSame('Toujours actif', $settings['texts']['required']);
-        self::assertSame('Sans réponse de votre part, c\'est accepté dans {count} s.', $settings['texts']['countdown'], 'the seconds go where the library puts them');
+        self::assertSame("Sans réponse de votre part, c'est accepté dans\u{00A0}{count}\u{00A0}s.", $settings['texts']['countdown'], 'the seconds go where the library puts them');
         self::assertStringContainsString('<a href="/confidentialite">Confidentialité</a>', $settings['texts']['text']['html']);
     }
 
@@ -188,7 +188,7 @@ class ConsentExtensionTest extends TestCase
         ], 'en')->settings();
 
         self::assertSame(['duration' => 30, 'action' => 'refuse'], $settings['countdown']);
-        self::assertSame('With no answer from you, it counts as refused in {count} s.', $settings['texts']['countdown']);
+        self::assertSame("With no answer from you, it counts as refused in\u{00A0}{count}\u{00A0}s.", $settings['texts']['countdown']);
         self::assertTrue($settings['debug']);
         self::assertSame(['store' => 'local', 'name' => 'answer', 'lifetime' => '180d'], $settings['record']);
         self::assertSame('bottom-left', $settings['position'], 'what the configuration says by name wins');
